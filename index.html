@@ -1,86 +1,278 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>AgoraWeather NZ</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Agora Weather NZ Pro</title>
   <style>
-    body {background:#181e2a; color:#fff; font-family:'Segoe UI',Arial,sans-serif; margin:0;}
-    #main {max-width:440px; margin:0 auto; padding:0 2px 32px 2px;}
-    .block {background:#222c40; border-radius:16px; margin:22px 0 28px 0; box-shadow:0 2px 14px #0007;}
-    .curbox {text-align:center; padding:23px 9px 16px 9px;}
-    .city {font-size:1.45rem; font-weight:600; letter-spacing:.03em;}
-    .icon {width:84px; height:84px;}
-    .ctemp {font-size:3.4rem; font-weight:700; letter-spacing:-.03em; margin-top:-6px;}
-    .cdesc {font-size:1.21rem; font-weight:500; margin-bottom:7px; color:#e7eaf8;}
-    .details {display:flex; flex-wrap:wrap; justify-content:center; gap:10px 18px; font-size:1rem; margin:13px auto 7px auto; max-width:370px;}
-    .details span {min-width:41%; color:#c8daf7;}
-    .advice {background:#253e62; color:#ffe180; border-radius:7px; font-size:1.07rem; margin:13px 10px 7px 10px; padding:9px 12px; font-weight:500; box-shadow:0 1px 8px #0002;}
-    .forecast-wrap {overflow-x:auto; margin:0 0 7px 0;}
-    .fcards {display:flex; gap:13px; padding:0 6px;}
-    .fcard {background:#232f47; border-radius:11px; padding:16px 11px 12px 11px; min-width:96px; text-align:center; box-shadow:0 1px 5px #0002; cursor:pointer;}
-    .fcard .ficon {width:42px; height:42px;}
-    .fcard .fday {font-size:1.08rem; font-weight:600;}
-    .fcard .fdesc {font-size:1.01rem; color:#b5daf7; margin:2px 0 2px 0;}
-    .fcard .ftemp {font-size:1.11rem; font-weight:600; letter-spacing:.01em;}
-    .info {font-size:0.99rem; color:#aad7ff; margin:10px 0 5px 0; text-align:center;}
-    .section-btn {background:#181e2a; color:#fff; border:0; border-radius:8px; padding:10px 0; margin:13px 8px 4px 8px; cursor:pointer; width:96%; font-size:1.04rem;}
-    .attribution {text-align:center; font-size:0.83rem; color:#b5b5b5; margin-top:19px;}
-    .modal {display:none; position:fixed; z-index:1000; top:0; left:0; width:100vw; height:100vh; background:#0c1424cc; align-items:center; justify-content:center;}
-    .modal-content {background:#232f47; border-radius:13px; padding:22px; max-width:410px; width:97vw; max-height:81vh; overflow-y:auto; margin:48px auto; position:relative;}
-    .modal-title {font-weight:600; font-size:1.18rem; margin-bottom:11px;}
-    .close-btn {position:absolute; right:17px; top:13px; font-size:2rem; color:#aad7ff; background:none; border:none; cursor:pointer;}
-    .hourly-row {display:flex; align-items:center; margin-bottom:9px;}
-    .hour-time {width:62px; font-weight:600;}
-    .hour-icon {width:31px;}
-    .hour-cond {flex:1; margin:0 8px;}
-    .hour-temp {width:44px; text-align:right; font-weight:500;}
-    .hr-row {font-size:0.97rem; color:#dde5f3;}
-    .chart {display:flex; align-items:flex-end; height:92px; gap:8px; margin:20px 0 6px;}
-    .bar {background:#61aaff; width:16px; border-radius:4px 4px 0 0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;}
-    .bar-label {font-size:0.85rem; text-align:center; margin-top:2px;}
-    .bar-value {font-size:0.83rem; margin-bottom:3px;}
-    .rain-totals {margin:11px 0 5px; font-size:1.01rem;}
-    @media (max-width:550px){
-      #main {padding:0 0px;}
-      .block {margin:14px 0 21px 0;}
-      .modal-content {padding:11px 2px;}
-      .ctemp {font-size:2.5rem;}
+    body {
+      background: #181e2a;
+      color: #fff;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    #main {
+      max-width: 430px;
+      margin: 0 auto;
+      padding: 0 8px 36px 8px;
+    }
+    .card {
+      background: #22304c;
+      border-radius: 16px;
+      padding: 18px 14px 14px 14px;
+      margin: 18px 0 22px 0;
+      box-shadow: 0 2px 18px #0005;
+      text-align: center;
+    }
+    .loc {
+      font-size: 1.42rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      letter-spacing: 0.01em;
+    }
+    .c-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      margin-bottom: 5px;
+    }
+    .c-icon {
+      width: 66px; height: 66px;
+      border-radius: 12px;
+      background: #232f47;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .c-temp {
+      font-size: 3.3rem;
+      font-weight: bold;
+      letter-spacing: -0.03em;
+      line-height: 1.12;
+    }
+    .c-desc {
+      font-size: 1.19rem;
+      margin-bottom: 2px;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+    }
+    .c-details {
+      margin: 7px 0 3px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 0;
+      justify-content: space-between;
+      font-size: 1.01rem;
+      color: #d1e1fa;
+    }
+    .c-details span {
+      width: 47.5%;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .ai-advice {
+      background: #232f47;
+      border-radius: 9px;
+      padding: 11px 13px 10px 13px;
+      margin: 10px 0 0 0;
+      text-align: left;
+      font-size: 1.08rem;
+      font-weight: 500;
+      color: #ffe180;
+      box-shadow: 0 1px 8px #0001;
+    }
+    .ai-urgent {
+      color: #fff;
+      background: #c83224;
+      border-radius: 6px;
+      padding: 7px 10px 6px 9px;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 1.11rem;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 0px 8px #0004;
+    }
+    .forecast-row {
+      display: flex;
+      gap: 11px;
+      overflow-x: auto;
+      margin-top: 12px;
+      padding-bottom: 5px;
+    }
+    .f-card {
+      background: #232f47;
+      border-radius: 12px;
+      flex: 0 0 92px;
+      padding: 13px 4px 12px 4px;
+      cursor: pointer;
+      box-shadow: 0 1px 5px #0002;
+      text-align: center;
+      transition: background 0.14s;
+    }
+    .f-card:active, .f-card:hover {
+      background: #304067;
+    }
+    .f-day {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #ffe180;
+      margin-bottom: 3px;
+    }
+    .f-icon {
+      width: 36px; height: 36px;
+      margin-bottom: 1px;
+    }
+    .f-desc {
+      font-size: 0.98rem;
+      min-height: 21px;
+      color: #d1e1fa;
+    }
+    .f-temp {
+      margin-top: 3px;
+      font-size: 1.08rem;
+      color: #fff;
+      font-weight: 500;
+    }
+    .bar-btn {
+      background: #1b2a46;
+      color: #aad7ff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin: 17px 0 3px 0;
+      font-size: 1.09rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 1px 7px #0002;
+      transition: background 0.13s;
+    }
+    .bar-btn:hover {
+      background: #232f47;
+    }
+    .footer {
+      text-align: center;
+      color: #aac9f4;
+      font-size: 0.89rem;
+      margin: 30px 0 0 0;
+    }
+    /* Popups */
+    .modal-bg {
+      position: fixed;
+      z-index: 9999;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(10,18,36,0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-bg.active { display: flex; }
+    .modal {
+      background: #232f47;
+      border-radius: 17px;
+      padding: 21px 11px 15px 11px;
+      color: #fff;
+      max-width: 365px;
+      width:95vw;
+      box-shadow: 0 8px 30px #000d;
+      position: relative;
+    }
+    .modal .close {
+      position: absolute;
+      top:7px; right: 17px;
+      font-size: 2rem;
+      color: #aad7ff;
+      cursor:pointer;
+      background:none;
+      border:none;
+    }
+    .modal .title {
+      font-size:1.13rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    /* Hourly */
+    .hourly-row {
+      margin-top: 7px;
+      max-height: 355px;
+      overflow-y: auto;
+      min-width: 0;
+    }
+    .hour-block {
+      display: flex;
+      align-items: center;
+      background: #181e2a;
+      border-radius: 7px;
+      padding: 7px 5px 7px 7px;
+      margin-bottom: 7px;
+      gap: 9px;
+    }
+    .h-time {
+      font-size: 1.05rem;
+      color: #ffe180;
+      font-weight: 600;
+      width: 43px;
+    }
+    .h-icon { width: 30px; height: 30px;}
+    .h-cond {flex: 1 1 0; color:#dde5f3;}
+    .h-temp {font-size:1.05rem;font-weight:600;}
+    /* Rain Chart */
+    .chart { display: flex; align-items: flex-end; height: 92px; gap: 8px; margin: 11px 0 7px;}
+    .bar { background: #85e7ff; width: 16px; border-radius: 4px 4px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;}
+    .bar-label { font-size: 0.87rem; text-align: center; margin-top: 2px;}
+    .bar-value { font-size: 0.85rem; margin-bottom: 3px;}
+    .rain-totals {margin: 8px 0 2px; font-size: 1.01rem;}
+    @media (max-width: 540px) {
+      #main {padding:0 2px;}
+      .card {padding: 13px 5px 11px 5px;}
+      .forecast-row {gap:5px;}
+      .f-card {padding:10px 2px 8px 2px;}
+      .modal {padding: 13px 2px;}
     }
   </style>
 </head>
 <body>
 <div id="main">
-  <div class="block curbox">
-    <div class="city" id="loc">Loading...</div>
-    <img id="icon" class="icon" src="" alt="" />
-    <div class="ctemp" id="ctemp"></div>
-    <div class="cdesc" id="cond"></div>
-    <div class="details" id="details"></div>
-    <div class="advice" id="advice"></div>
-  </div>
-  <div class="block">
-    <div class="forecast-wrap">
-      <div class="fcards" id="forecast"></div>
+  <div class="card">
+    <div class="loc" id="loc">Loading…</div>
+    <div class="c-main">
+      <div class="c-icon"><img id="cicon" src="" alt="" style="width:54px;height:54px;"></div>
+      <div>
+        <div class="c-temp" id="ctemp">--°</div>
+        <div class="c-desc" id="cdesc"></div>
+      </div>
     </div>
-    <div class="info" id="info"></div>
-    <button class="section-btn" onclick="showRain()">🌧 Rainfall History</button>
-    <div class="attribution">Data powered by Vaisala Xweather</div>
+    <div class="c-details" id="cdetails"></div>
+  </div>
+  <div class="ai-advice" id="aiAdvice"></div>
+  <div class="forecast-row" id="forecastRow"></div>
+  <button class="bar-btn" onclick="showRainModal()">
+    <span style="font-size:1.3em">🌧</span> Rainfall History
+  </button>
+  <div class="footer">Data powered by Vaisala Xweather &middot; Designed for New Zealanders</div>
+</div>
+
+<!-- Hourly Forecast Modal -->
+<div class="modal-bg" id="hourModalBg">
+  <div class="modal">
+    <button class="close" onclick="closeModal('hourModalBg')">&times;</button>
+    <div class="title" id="hourTitle"></div>
+    <div class="hourly-row" id="hourRows"></div>
   </div>
 </div>
-<!-- Hourly Modal -->
-<div class="modal" id="hourModal">
-  <div class="modal-content">
-    <button class="close-btn" onclick="closeModal('hourModal')">&times;</button>
-    <div id="hourModalTitle" class="modal-title"></div>
-    <div id="hourlyRows"></div>
-  </div>
-</div>
-<!-- Rainfall Modal -->
-<div class="modal" id="rainModal">
-  <div class="modal-content">
-    <button class="close-btn" onclick="closeModal('rainModal')">&times;</button>
-    <div class="modal-title">Rainfall History</div>
+<!-- Rainfall Chart Modal -->
+<div class="modal-bg" id="rainModalBg">
+  <div class="modal">
+    <button class="close" onclick="closeModal('rainModalBg')">&times;</button>
+    <div class="title">Rainfall History</div>
     <div id="rainChart"></div>
     <div class="rain-totals" id="rainTotals"></div>
   </div>
@@ -89,109 +281,161 @@
 const clientId = "U8feQfLlcEfcXDfsWZs4C";
 const clientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
 const apiBase = "https://data.api.xweather.com";
-let userLat, userLon, cityName = "";
 
+const wxIconMap = {
+  // Map Vaisala Xweather icon codes or condition codes to OpenWeatherMap or local SVGs here
+  "clear": "01d", "clearn": "01n",
+  "cloudy": "03d", "cloudyn": "03n",
+  "mcloudy": "02d", "mcloudyn": "02n",
+  "rain": "09d", "rainn": "09n",
+  "showers": "09d",
+  "snow": "13d", "snown": "13n",
+  "flurries": "13d",
+  "fog": "50d", "fogn": "50n",
+  "storm": "11d", "thunder": "11d",
+  "drizzle": "10d",
+  "wind": "50d", "blustery": "50d",
+  "hail": "13d",
+};
+
+function wxIcon(icon, fallback="01d") {
+  // Try OpenWeatherMap icons
+  if (!icon) return `https://openweathermap.org/img/wn/${fallback}@2x.png`;
+  let key = icon.toLowerCase().replace(/_/g, '');
+  let code = wxIconMap[key] || fallback;
+  return `https://openweathermap.org/img/wn/${code}@2x.png`;
+}
+
+// Geolocation + fallback to Hamilton
 function getLocation() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(gotLoc, geoErr, {enableHighAccuracy:true, timeout:9000});
-  } else { useFallbackLoc(); }
-}
-function gotLoc(pos) { userLat = pos.coords.latitude; userLon = pos.coords.longitude; fetchAll(); }
-function geoErr() { useFallbackLoc(); }
-function useFallbackLoc() { userLat = -37.7833; userLon = 175.2833; fetchAll(); }
-
-async function fetchAll() {
-  let latlon = `${userLat},${userLon}`;
-  let forecastRaw = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.icon,periods.uvIndex,periods.sunriseISO,periods.sunsetISO,periods.sky&client_id=${clientId}&client_secret=${clientSecret}`);
-  let forecast = forecastRaw && forecastRaw.response && forecastRaw.response[0] ? forecastRaw.response[0] : null;
-  let condsRaw = await fetchJson(`${apiBase}/conditions/${latlon}?format=json&plimit=1&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sky,periods.sunriseISO,periods.sunsetISO,periods.icon&client_id=${clientId}&client_secret=${clientSecret}`);
-  let cur = condsRaw && condsRaw.response && condsRaw.response[0] && condsRaw.response[0].periods && condsRaw.response[0].periods[0] ? condsRaw.response[0].periods[0] : null;
-  let hourlyRaw = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=1hr&limit=48&fields=periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.weather,periods.icon,periods.humidity,periods.uvIndex,periods.precipMM,periods.sky,periods.sunriseISO,periods.sunsetISO&client_id=${clientId}&client_secret=${clientSecret}`);
-  let hourly = hourlyRaw && hourlyRaw.response && hourlyRaw.response[0] && hourlyRaw.response[0].periods ? hourlyRaw.response[0].periods : [];
-  let lightning = await fetchJson(`${apiBase}/lightning/${latlon}?format=json&filter=all&limit=10&fields=id,ob,loc,recISO&client_id=${clientId}&client_secret=${clientSecret}`);
-  let road = await fetchJson(`${apiBase}/roadweather/${latlon}?client_id=${clientId}&client_secret=${clientSecret}`);
-  let cyclone = await fetchJson(`${apiBase}/tropicalcyclones/closest?p=${latlon}&radius=25mi&minradius=0mi&filter=all,&limit=2&client_id=${clientId}&client_secret=${clientSecret}`);
-  let alerts = await fetchJson(`${apiBase}/alerts/${latlon}?format=json&limit=3&fields=details.name,loc,details.color,details.body,details.bodyFull,timestamps.beginsISO,timestamps.expiresISO,includes.zipcodes,includes.counties&client_id=${clientId}&client_secret=${clientSecret}`);
-  let rainDays = await fetchRainDays(latlon);
-  cityName = (forecast && forecast.place && forecast.place.name) ? forecast.place.name : "Location";
-  document.getElementById("loc").textContent = cityName;
-  let cicon = cur && cur.icon ? iconUrl(cur.icon) : "";
-  document.getElementById("icon").src = cicon;
-  document.getElementById("icon").alt = cur ? cur.weather : "";
-  document.getElementById("ctemp").textContent = cur && cur.tempC!==undefined ? Math.round(cur.tempC)+"°" : "--";
-  document.getElementById("cond").textContent = cur && cur.weather ? cur.weather : (forecast && forecast.periods && forecast.periods[0] && forecast.periods[0].weather) ? forecast.periods[0].weather : "--";
-  document.getElementById("details").innerHTML = `
-    <span>Feels: ${cur && cur.feelslikeC!==undefined ? Math.round(cur.feelslikeC)+"°" : "--"}</span>
-    <span>Humidity: ${cur && cur.humidity!==undefined ? cur.humidity+"%" : "--"}</span>
-    <span>Dew: ${cur && cur.dewpointC!==undefined ? Math.round(cur.dewpointC)+"°" : "--"}</span>
-    <span>UV: ${cur && cur.uvIndex!==undefined ? cur.uvIndex : "--"}</span>
-    <span>Cloud: ${cur && cur.sky!==undefined ? cur.sky+"%" : "--"}</span>
-    <span>Sunrise: ${cur && cur.sunriseISO ? hhmm(cur.sunriseISO) : "--"}</span>
-    <span>Sunset: ${cur && cur.sunsetISO ? hhmm(cur.sunsetISO) : "--"}</span>
-    <span>Wind: ${cur && cur.windSpeedKPH!==undefined ? Math.round(cur.windSpeedKPH)+"km/h" : "--"}</span>
-    <span>Gusts: ${cur && cur.windGustKPH!==undefined ? Math.round(cur.windGustKPH)+"km/h" : "--"}</span>
-    <span>Pressure: ${cur && cur.pressureMB!==undefined ? cur.pressureMB+" hPa" : "--"}</span>
-    <span>Visibility: ${cur && cur.visibilityKM!==undefined ? cur.visibilityKM+" km" : "--"}</span>
-  `;
-  let advice = aiAdvice({forecast, cur, lightning, road, cyclone, alerts, rainDays});
-  document.getElementById("advice").textContent = advice;
-  // Forecast horizontal cards
-  let fcHtml = "";
-  if (forecast && forecast.periods) {
-    forecast.periods.forEach((d, i) => {
-      let label = i==0 ? "Today" : i==1 ? "Tomorrow" : dayName(d.dateTimeISO);
-      fcHtml += `
-        <div class="fcard" onclick="showHourly(${i})">
-          <div class="fday">${label}</div>
-          <img src="${iconUrl(d.icon)}" class="ficon" alt="${d.weather||''}"/>
-          <div class="fdesc">${d.weather||''}</div>
-          <div class="ftemp">${d.maxTempC!==undefined?Math.round(d.maxTempC)+"°":""}/${d.minTempC!==undefined?Math.round(d.minTempC)+"°":""}</div>
-        </div>
-      `;
-    });
-  }
-  document.getElementById("forecast").innerHTML = fcHtml;
-  // Info line (hazards)
-  let infoArr = [];
-  if (lightning && lightning.response && lightning.response.length>0) infoArr.push("⚡ Lightning nearby");
-  if (road && road.response && road.response[0] && road.response[0].periods && road.response[0].periods[0] && road.response[0].periods[0].summary) infoArr.push(`🛣️ Road: ${road.response[0].periods[0].summary}`);
-  if (cyclone && cyclone.response && cyclone.response.length>0) infoArr.push(`🌀 Cyclone: ${cyclone.response[0].profile && cyclone.response[0].profile.name ? cyclone.response[0].profile.name : 'active'}`);
-  if (alerts && alerts.response && alerts.response.length>0 && alerts.response[0].details) infoArr.push(`⚠️ Alerts: ${alerts.response[0].details.name}`);
-  document.getElementById("info").innerHTML = infoArr.length ? infoArr.join("<br>") : "";
-  window._forecast = forecast;
-  window._hourly = hourly;
-}
-function iconUrl(icon) { return icon ? `https://cdn.aerisapi.com/wxblox/icons/${icon}.png` : ""; }
-function dayName(iso) { return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(iso).getDay()]; }
-function hhmm(iso) { let d=new Date(iso);return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0"); }
-async function fetchJson(url) { try { let r = await fetch(url); return await r.json(); } catch { return null; } }
-function showHourly(i) {
-  let hourly = window._hourly || [];
-  let fc = window._forecast && window._forecast.periods ? window._forecast.periods : [];
-  if (!hourly.length || !fc[i]) { alert("Hourly not ready."); return; }
-  let d0 = new Date(fc[i].dateTimeISO); d0.setHours(0,0,0,0);
-  let hlist = hourly.filter(h => {
-    let hd = new Date(h.dateTimeISO); return hd >= d0 && hd < new Date(d0.getTime() + 86400000);
+  return new Promise(res => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => res({lat: pos.coords.latitude, lon: pos.coords.longitude}),
+        () => res({lat: -37.7833, lon: 175.2833}), {timeout: 7000}
+      );
+    } else res({lat: -37.7833, lon: 175.2833});
   });
-  if (!hlist.length) { alert("Hourly not ready."); return; }
+}
+
+// Fetch helper
+async function fetchJson(url) {
+  try { let r = await fetch(url); return await r.json(); }
+  catch { return null; }
+}
+
+// Main load
+(async function() {
+  let {lat, lon} = await getLocation();
+  let latlon = `${lat},${lon}`;
+  // 1. Current
+  let cUrl = `${apiBase}/conditions/${latlon}?format=json&plimit=1&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sky,periods.sunriseISO,periods.sunsetISO,periods.icon,periods.windGustKPH&client_id=${clientId}&client_secret=${clientSecret}`;
+  let curRaw = await fetchJson(cUrl);
+  let cLoc = curRaw && curRaw.response && curRaw.response[0] && curRaw.response[0].loc ? curRaw.response[0].loc : {};
+  let c = curRaw && curRaw.response && curRaw.response[0] && curRaw.response[0].periods && curRaw.response[0].periods[0] ? curRaw.response[0].periods[0] : {};
+  let city = cLoc.city || cLoc.place || cLoc.region || "Location";
+  document.getElementById("loc").textContent = city;
+  document.getElementById("cicon").src = wxIcon(c.icon, "01d");
+  document.getElementById("cicon").alt = c.weather || "";
+  document.getElementById("ctemp").textContent = c.tempC!=null ? Math.round(c.tempC) + "°" : "--°";
+  document.getElementById("cdesc").textContent = c.weather || "--";
+  document.getElementById("cdetails").innerHTML = `
+    <span>Feels: ${c.feelslikeC!=null ? Math.round(c.feelslikeC)+"°" : "--"}</span>
+    <span>Humidity: ${c.humidity!=null ? c.humidity+"%" : "--"}</span>
+    <span>Dew: ${c.dewpointC!=null ? Math.round(c.dewpointC)+"°" : "--"}</span>
+    <span>UV: ${c.uvIndex!=null ? c.uvIndex : "--"}</span>
+    <span>Cloud: ${c.sky!=null ? c.sky+"%" : "--"}</span>
+    <span>Sunrise: ${c.sunriseISO?hhmm(c.sunriseISO):"--"}</span>
+    <span>Sunset: ${c.sunsetISO?hhmm(c.sunsetISO):"--"}</span>
+    <span>Wind: ${c.windSpeedKPH!=null ? Math.round(c.windSpeedKPH)+"km/h" : "--"}</span>
+    <span>Gusts: ${c.windGustKPH!=null ? Math.round(c.windGustKPH)+"km/h" : "--"}</span>
+    <span>Pressure: ${c.pressureMB!=null ? c.pressureMB+" hPa" : "--"}</span>
+    <span>Visibility: ${c.visibilityKM!=null ? c.visibilityKM+" km" : "--"}</span>
+  `;
+  // 2. Forecast daily
+  let fUrl = `${apiBase}/forecasts/${latlon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,loc,periods.maxTempC,periods.minTempC,periods.weather,periods.icon&client_id=${clientId}&client_secret=${clientSecret}`;
+  let fRaw = await fetchJson(fUrl);
+  let f = fRaw && fRaw.response && fRaw.response[0] && fRaw.response[0].periods ? fRaw.response[0].periods : [];
+  // 3. Forecast hourly (48hr, 2-hour steps for today+6 days)
+  let hUrl = `${apiBase}/forecasts/${latlon}?format=json&filter=1hr&limit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon&client_id=${clientId}&client_secret=${clientSecret}`;
+  let hRaw = await fetchJson(hUrl);
+  let h = hRaw && hRaw.response && hRaw.response[0] && hRaw.response[0].periods ? hRaw.response[0].periods : [];
+  window._hourly = h; window._forecast = f;
+  // 4. Rainfall
+  let rain = await fetchRainDays(latlon);
+  // 5. Lightning, Cyclone, Road, Alerts
+  let [lightning, cyclone, road, alerts] = await Promise.all([
+    fetchJson(`${apiBase}/lightning/${latlon}?format=json&filter=all&limit=5&fields=id,ob,loc,recISO&client_id=${clientId}&client_secret=${clientSecret}`),
+    fetchJson(`${apiBase}/tropicalcyclones/closest?p=${latlon}&radius=25mi&minradius=0mi&filter=all,&limit=1&client_id=${clientId}&client_secret=${clientSecret}`),
+    fetchJson(`${apiBase}/roadweather/${latlon}?client_id=${clientId}&client_secret=${clientSecret}`),
+    fetchJson(`${apiBase}/alerts/${latlon}?format=json&limit=2&fields=details.name,loc,details.color,details.body,details.bodyFull,timestamps.beginsISO,timestamps.expiresISO,includes.zipcodes,includes.counties&client_id=${clientId}&client_secret=${clientSecret}`)
+  ]);
+  // Forecast cards
+  renderForecastCards(f);
+  // AI advice
+  document.getElementById("aiAdvice").innerHTML = aiAdvice({c, f, lightning, cyclone, road, alerts, rain});
+})();
+
+function renderForecastCards(f) {
+  let now = new Date();
+  let days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   let html = "";
-  hlist.forEach(h => {
-    html += `<div class="hourly-row">
-      <span class="hour-time">${hhmm(h.dateTimeISO)}</span>
-      <img src="${iconUrl(h.icon)}" class="hour-icon" alt=""/>
-      <span class="hour-cond">${h.weather||""}</span>
-      <span class="hour-temp">${h.tempC!==undefined?Math.round(h.tempC)+"°":""}</span>
+  f.forEach((d, i) => {
+    let dt = new Date(d.dateTimeISO);
+    let day = i==0 ? "Today" : i==1 ? "Tomorrow" : days[dt.getDay()];
+    html += `<div class="f-card" onclick="showHourly(${i})">
+      <div class="f-day">${day}</div>
+      <img class="f-icon" src="${wxIcon(d.icon)}" alt="" />
+      <div class="f-desc">${d.weather||""}</div>
+      <div class="f-temp">${d.maxTempC!=null?Math.round(d.maxTempC)+"°":""}/${d.minTempC!=null?Math.round(d.minTempC)+"°":""}</div>
     </div>`;
   });
-  document.getElementById("hourModalTitle").textContent = fc[i].weather + " - " + dayName(fc[i].dateTimeISO);
-  document.getElementById("hourlyRows").innerHTML = html;
-  document.getElementById("hourModal").style.display = "flex";
+  document.getElementById("forecastRow").innerHTML = html;
 }
-function closeModal(id) { document.getElementById(id).style.display="none"; }
-function showRain() {
-  let rain = window._rainDays || [];
-  if (!rain.length) { document.getElementById("rainChart").innerHTML="No rain data"; document.getElementById("rainTotals").textContent=""; }
-  else {
+
+function showHourly(i) {
+  let h = window._hourly||[];
+  let f = window._forecast||[];
+  if (!f[i]) return;
+  // Find date range for this day
+  let base = new Date(f[i].dateTimeISO); base.setHours(1,0,0,0);
+  let end = new Date(base); end.setHours(24,0,0,0);
+  let hourly = h.filter(x => {
+    let t = new Date(x.dateTimeISO);
+    return t >= base && t < end && t.getHours()%2==1;
+  });
+  // If nothing found, fallback to all hours that day
+  if (!hourly.length) hourly = h.filter(x => {
+    let t = new Date(x.dateTimeISO);
+    return t >= base && t < end;
+  });
+  // Only display 2hr blocks from 1am to midnight
+  let hours = [];
+  for (let hr=1; hr<=23; hr+=2) {
+    let x = hourly.find(z => new Date(z.dateTimeISO).getHours()==hr);
+    if (x) hours.push(x);
+  }
+  let hourHtml = hours.map(x=>`
+    <div class="hour-block">
+      <span class="h-time">${hhmm(x.dateTimeISO)}</span>
+      <img class="h-icon" src="${wxIcon(x.icon)}" alt="" />
+      <span class="h-cond">${x.weather||""}</span>
+      <span class="h-temp">${x.tempC!=null?Math.round(x.tempC)+"°":""}</span>
+    </div>
+  `).join("");
+  document.getElementById("hourTitle").textContent = (f[i].weather||"") + " - " + dayName(f[i].dateTimeISO);
+  document.getElementById("hourRows").innerHTML = hourHtml || "<div>No hourly data.</div>";
+  document.getElementById("hourModalBg").classList.add("active");
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove("active"); }
+
+function showRainModal() {
+  let rain = window._rainDays||[];
+  if (!rain.length) {
+    document.getElementById("rainChart").innerHTML="No rain data";
+    document.getElementById("rainTotals").textContent="";
+  } else {
     let max = Math.max(...rain.map(d=>d.mm));
     let chart = rain.map(d=>`
       <div class="bar" style="height:${Math.round((d.mm/max)*82)}px">
@@ -203,7 +447,7 @@ function showRain() {
     let total7 = rain.reduce((a,b)=>a+b.mm,0);
     document.getElementById("rainTotals").innerHTML = `Past 7 days: <strong>${total7}mm</strong>`;
   }
-  document.getElementById("rainModal").style.display = "flex";
+  document.getElementById("rainModalBg").classList.add("active");
 }
 async function fetchRainDays(latlon) {
   let fcRaw = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.precipMM&client_id=${clientId}&client_secret=${clientSecret}`);
@@ -213,35 +457,58 @@ async function fetchRainDays(latlon) {
   window._rainDays = days;
   return days;
 }
-function aiAdvice({forecast,cur,lightning,road,cyclone,alerts,rainDays}) {
+function dayName(iso) { return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(iso).getDay()]; }
+function hhmm(iso) { let d=new Date(iso);return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0"); }
+
+// --- AI ADVICE ---
+function aiAdvice({c,f,lightning,cyclone,road,alerts,rain}) {
+  let now = new Date();
   let advice = [];
-  if (alerts && alerts.response && alerts.response.length>0 && alerts.response[0].details) advice.push("⚠️ " + alerts.response[0].details.body);
-  if (cyclone && cyclone.response && cyclone.response.length>0) advice.push("🌀 Cyclone warning: " + (cyclone.response[0].profile && cyclone.response[0].profile.name ? cyclone.response[0].profile.name : ""));
-  if (road && road.response && road.response[0] && road.response[0].periods && road.response[0].periods[0] && road.response[0].periods[0].summary) advice.push("🛣️ Roads: " + road.response[0].periods[0].summary);
-  if (lightning && lightning.response && lightning.response.length>0) advice.push("⚡ Lightning activity nearby");
-  let f = forecast && forecast.periods ? forecast.periods[0] : null;
-  if (f) {
-    let t = f.maxTempC;
-    let pop = f.pop;
-    let cond = (f.weather||"").toLowerCase();
-    if (cond.includes("storm")) advice.push("Storms possible—take care outdoors.");
-    if (pop>70) advice.push("High chance of rain—keep an umbrella handy.");
-    if (t>=27) advice.push("Hot day—drink plenty of water and use sunblock.");
-    if (t<=3) advice.push("Freezing – black ice risk early mornings.");
-    if (f.uvIndex && f.uvIndex>6) advice.push("UV high—wear sunscreen.");
-    if (cond.includes("snow")) advice.push("Possible snow—check road conditions.");
+  // 1. Urgent official alerts (severe weather, cyclone, etc)
+  if (alerts && alerts.response && alerts.response.length>0) {
+    let warn = alerts.response[0];
+    if (warn && warn.details && warn.details.name && warn.details.body) {
+      advice.push(`<div class="ai-urgent">⚠️ <span>${warn.details.name}:</span> ${warn.details.body.replace(/\s+/g,' ').replace(/(\r\n|\n|\r)/gm," ")}</div>`);
+    }
   }
-  let month = (new Date()).getMonth()+1;
-  if (month>=5&&month<=8) advice.push("Winter: check for frost, allow extra travel time.");
-  else if (month>=11||month<=2) advice.push("Summer: Stay sun safe and hydrated.");
-  let shown = (localStorage.getItem("last_advice")||"").split("|");
-  let uniq = advice.filter(a=>a&&shown.indexOf(a)<0);
-  let show = uniq.length ? uniq[0] : advice[0] || "All clear—enjoy your day!";
-  let advOut = [show].concat(shown.slice(0,2)).join("|");
-  try { localStorage.setItem("last_advice", advOut); } catch{}
-  return show;
+  if (cyclone && cyclone.response && cyclone.response.length>0 && cyclone.response[0].profile && cyclone.response[0].profile.name) {
+    advice.push(`<div class="ai-urgent">🌀 Cyclone: ${cyclone.response[0].profile.name} nearby</div>`);
+  }
+  // 2. Immediate hazards
+  if (c.uvIndex!=null && c.uvIndex>=6) {
+    advice.push(`<div>🌞 <b>High UV today</b> – Slip, slop, slap, and wrap! Sunscreen, hat, and sunglasses advised (NZ UV is strong in summer).</div>`);
+  }
+  if (rain && rain.length && rain[rain.length-1].mm>20) {
+    advice.push(`<div>🌧 <b>Heavy rain</b> in last 24h – be alert for surface flooding, avoid driving through floodwater.</div>`);
+  }
+  if (c.tempC!=null && c.tempC<=3) {
+    advice.push(`<div>❄️ <b>Winter: check for frost, allow extra travel time.</b></div>`);
+  }
+  // 3. General context-aware NZ advice (location, time of year)
+  let month = now.getMonth()+1;
+  if (month>=5 && month<=8) {
+    advice.push(`Winter in NZ – mornings can be icy. Black ice risk on rural roads. Slow down, keep headlights on, and increase following distance.`);
+  }
+  if (month>=11||month<=2) {
+    advice.push(`Summer in NZ – Extreme UV, stay hydrated, avoid sunburn. Take extra care near beaches and rivers after heavy rain.`);
+  }
+  if (c.weather && /wind/i.test(c.weather)) {
+    advice.push(`Strong winds: Secure trampolines/outdoor items and watch for fallen branches.`);
+  }
+  if (c.weather && /rain|showers/i.test(c.weather)) {
+    advice.push(`Take an umbrella. Wet roads increase stopping distance – slow down!`);
+  }
+  if (lightning && lightning.response && lightning.response.length>0) {
+    advice.push(`⚡ Lightning activity nearby – stay indoors if thunder roars.`);
+  }
+  if (road && road.response && road.response[0] && road.response[0].periods && road.response[0].periods[0] && road.response[0].periods[0].summary) {
+    advice.push(`🛣️ Roads: ${road.response[0].periods[0].summary}`);
+  }
+  // Output
+  return advice.length
+    ? advice.slice(0,3).join("<br>")
+    : `All clear for now! Enjoy your day.`;
 }
-getLocation();
 </script>
 </body>
 </html>
