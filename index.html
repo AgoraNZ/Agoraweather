@@ -62,7 +62,6 @@
     <button class="section-btn" onclick="showRain()">🌧 Rainfall History</button>
     <div class="attribution">Data powered by Vaisala Xweather</div>
   </div>
-
   <!-- Hourly Modal -->
   <div class="modal" id="hourModal">
     <div class="modal-content" id="hourModalContent">
@@ -80,14 +79,12 @@
       <div class="rain-totals" id="rainTotals"></div>
     </div>
   </div>
-
 <script>
 // === API CONFIG ===
 const clientId = "U8feQfLlcEfcXDfsWZs4C";
 const clientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
 const apiBase = "https://data.api.xweather.com";
 let userLat, userLon, cityName="";
-
 // === GEOLOCATION ===
 function getLocation() {
   if (navigator.geolocation) {
@@ -101,25 +98,25 @@ function gotLoc(pos) {
   userLon = pos.coords.longitude;
   fetchAll();
 }
-function geoErr() {
-  useFallbackLoc();
-}
+function geoErr() { useFallbackLoc(); }
 function useFallbackLoc() {
-  // Default to Hamilton, NZ
+  // Hamilton, NZ fallback
   userLat = -37.7833;
   userLon = 175.2833;
   fetchAll();
 }
-
 // === FETCH ALL DATA ===
 async function fetchAll() {
   let latlon = `${userLat},${userLon}`;
   // 1. Forecast
-  let forecast = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.icon,periods.uvIndex,periods.sunriseISO,periods.sunsetISO,periods.sky&client_id=${clientId}&client_secret=${clientSecret}`);
+  let forecastRaw = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.icon,periods.uvIndex,periods.sunriseISO,periods.sunsetISO,periods.sky&client_id=${clientId}&client_secret=${clientSecret}`);
+  let forecast = forecastRaw && forecastRaw.response && forecastRaw.response[0] ? forecastRaw.response[0] : null;
   // 2. Current
-  let conds = await fetchJson(`${apiBase}/conditions/${latlon}?format=json&plimit=1&filter=minutelyprecip,5min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sky,periods.sunriseISO,periods.sunsetISO,periods.icon&client_id=${clientId}&client_secret=${clientSecret}`);
+  let condsRaw = await fetchJson(`${apiBase}/conditions/${latlon}?format=json&plimit=1&filter=minutelyprecip,5min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sky,periods.sunriseISO,periods.sunsetISO,periods.icon&client_id=${clientId}&client_secret=${clientSecret}`);
+  let cur = condsRaw && condsRaw.response && condsRaw.response[0] && condsRaw.response[0].periods && condsRaw.response[0].periods[0] ? condsRaw.response[0].periods[0] : null;
   // 3. Hourly
-  let hourly = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=1hr&limit=48&fields=periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.weather,periods.icon&client_id=${clientId}&client_secret=${clientSecret}`);
+  let hourlyRaw = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=1hr&limit=48&fields=periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.weather,periods.icon&client_id=${clientId}&client_secret=${clientSecret}`);
+  let hourly = hourlyRaw && hourlyRaw.response && hourlyRaw.response[0] && hourlyRaw.response[0].periods ? hourlyRaw.response[0].periods : [];
   // 4. Lightning
   let lightning = await fetchJson(`${apiBase}/lightning/${latlon}?format=json&filter=all&limit=10&fields=id,ob,loc,recISO&client_id=${clientId}&client_secret=${clientSecret}`);
   // 5. Road
@@ -128,15 +125,12 @@ async function fetchAll() {
   let cyclone = await fetchJson(`${apiBase}/tropicalcyclones/closest?p=${latlon}&radius=25mi&minradius=0mi&filter=all,&limit=2&client_id=${clientId}&client_secret=${clientSecret}`);
   // 7. Alerts
   let alerts = await fetchJson(`${apiBase}/alerts/${latlon}?format=json&limit=3&fields=details.name,loc,details.color,details.body,details.bodyFull,timestamps.beginsISO,timestamps.expiresISO,includes.zipcodes,includes.counties&client_id=${clientId}&client_secret=${clientSecret}`);
-  // 8. Rain (YTD, month, week)
+  // 8. Rain
   let rainDays = await fetchRainDays(latlon);
-
-  // === BUILD UI ===
-  cityName = (forecast && forecast.loc && forecast.loc.name) ? forecast.loc.name : (conds && conds.loc && conds.loc.name) ? conds.loc.name : "Location";
+  // Location name
+  cityName = (forecast && forecast.place && forecast.place.name) ? forecast.place.name : "Location";
   document.getElementById("loc").textContent = cityName;
-
   // Current
-  let cur = conds && conds.periods && conds.periods[0] ? conds.periods[0] : null;
   let cicon = cur && cur.icon ? iconUrl(cur.icon) : "";
   document.getElementById("icon").src = cicon;
   document.getElementById("icon").alt = cur ? cur.weather : "";
@@ -155,13 +149,11 @@ async function fetchAll() {
     <span>Pressure: ${cur && cur.pressureMB!==undefined ? cur.pressureMB+" hPa" : "--"}</span>
     <span>Visibility: ${cur && cur.visibilityKM!==undefined ? cur.visibilityKM+" km" : "--"}</span>
   `;
-
-  // AI advice using all points:
+  // AI Advice
   let advice = aiAdvice({
     forecast, cur, lightning, road, cyclone, alerts, rainDays
   });
   document.getElementById("advice").textContent = advice;
-
   // Forecast
   let fcHtml = "";
   if (forecast && forecast.periods) {
@@ -178,15 +170,13 @@ async function fetchAll() {
     });
   }
   document.getElementById("forecast").innerHTML = fcHtml;
-
   // Info line (hazards)
   let infoArr = [];
-  if (lightning && lightning.ob && lightning.ob.length>0) infoArr.push("⚡ Lightning nearby");
-  if (road && road.status && road.status.summary) infoArr.push(`🛣️ Road: ${road.status.summary}`);
-  if (cyclone && cyclone.response && cyclone.response.length>0) infoArr.push(`🌀 Cyclone: ${cyclone.response[0].details ? cyclone.response[0].details.name : 'active'}`);
-  if (alerts && alerts.length>0) infoArr.push(`⚠️ Alerts: ${alerts[0].details.name}`);
+  if (lightning && lightning.response && lightning.response.length>0) infoArr.push("⚡ Lightning nearby");
+  if (road && road.response && road.response[0] && road.response[0].periods && road.response[0].periods[0] && road.response[0].periods[0].summary) infoArr.push(`🛣️ Road: ${road.response[0].periods[0].summary}`);
+  if (cyclone && cyclone.response && cyclone.response.length>0) infoArr.push(`🌀 Cyclone: ${cyclone.response[0].profile && cyclone.response[0].profile.name ? cyclone.response[0].profile.name : 'active'}`);
+  if (alerts && alerts.response && alerts.response.length>0 && alerts.response[0].details) infoArr.push(`⚠️ Alerts: ${alerts.response[0].details.name}`);
   document.getElementById("info").innerHTML = infoArr.length ? infoArr.join("<br>") : "";
-
   // Save for hourly modal
   window._forecast = forecast;
   window._hourly = hourly;
@@ -200,7 +190,7 @@ function hhmm(iso) { let d=new Date(iso);return d.getHours().toString().padStart
 async function fetchJson(url) { try { let r = await fetch(url); return await r.json(); } catch { return null; } }
 // === HOURLY POPUP ===
 function showHourly(i) {
-  let hourly = window._hourly && window._hourly.periods ? window._hourly.periods : [];
+  let hourly = window._hourly || [];
   let fc = window._forecast && window._forecast.periods ? window._forecast.periods : [];
   if (!hourly.length || !fc[i]) { alert("Hourly not ready."); return; }
   // Show 24h starting from this day
@@ -243,8 +233,8 @@ function showRain() {
 }
 // === FETCH 7 DAYS RAIN DATA ===
 async function fetchRainDays(latlon) {
-  // For demo: just last 7 days from forecast
-  let fc = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.precipMM&client_id=${clientId}&client_secret=${clientSecret}`);
+  let fcRaw = await fetchJson(`${apiBase}/forecasts/${latlon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.precipMM&client_id=${clientId}&client_secret=${clientSecret}`);
+  let fc = fcRaw && fcRaw.response && fcRaw.response[0] ? fcRaw.response[0] : null;
   if (!fc || !fc.periods) return [];
   let days = fc.periods.map(f=>({day:dayName(f.dateTimeISO), mm:Math.round(f.precipMM||0)}));
   window._rainDays = days;
@@ -252,13 +242,11 @@ async function fetchRainDays(latlon) {
 }
 // === AI ADVICE GENERATOR ===
 function aiAdvice({forecast,cur,lightning,road,cyclone,alerts,rainDays}) {
-  // Use all fields to give the most context-aware, non-repeating, relevant advice
   let advice = [];
-  if (alerts && alerts.length>0) advice.push("⚠️ " + alerts[0].details.body);
-  if (cyclone && cyclone.response && cyclone.response.length>0) advice.push("🌀 Cyclone warning: " + (cyclone.response[0].details ? cyclone.response[0].details.name : ""));
-  if (road && road.status && road.status.summary) advice.push("🛣️ Roads: " + road.status.summary);
-  if (lightning && lightning.ob && lightning.ob.length>0) advice.push("⚡ Lightning activity nearby");
-  // Weather hazards
+  if (alerts && alerts.response && alerts.response.length>0 && alerts.response[0].details) advice.push("⚠️ " + alerts.response[0].details.body);
+  if (cyclone && cyclone.response && cyclone.response.length>0) advice.push("🌀 Cyclone warning: " + (cyclone.response[0].profile && cyclone.response[0].profile.name ? cyclone.response[0].profile.name : ""));
+  if (road && road.response && road.response[0] && road.response[0].periods && road.response[0].periods[0] && road.response[0].periods[0].summary) advice.push("🛣️ Roads: " + road.response[0].periods[0].summary);
+  if (lightning && lightning.response && lightning.response.length>0) advice.push("⚡ Lightning activity nearby");
   let f = forecast && forecast.periods ? forecast.periods[0] : null;
   if (f) {
     let t = f.maxTempC;
@@ -271,20 +259,16 @@ function aiAdvice({forecast,cur,lightning,road,cyclone,alerts,rainDays}) {
     if (f.uvIndex && f.uvIndex>6) advice.push("UV high—wear sunscreen.");
     if (cond.includes("snow")) advice.push("Possible snow—check road conditions.");
   }
-  // Add a friendly "seasonal" line based on date:
   let month = (new Date()).getMonth()+1;
   if (month>=5&&month<=8) advice.push("Winter: check for frost, allow extra travel time.");
   else if (month>=11||month<=2) advice.push("Summer: Stay sun safe and hydrated.");
-  // Remove repeats
   let shown = (localStorage.getItem("last_advice")||"").split("|");
   let uniq = advice.filter(a=>a&&shown.indexOf(a)<0);
   let show = uniq.length ? uniq[0] : advice[0] || "All clear—enjoy your day!";
-  // Rotate for next time
   let advOut = [show].concat(shown.slice(0,2)).join("|");
   try { localStorage.setItem("last_advice", advOut); } catch{}
   return show;
 }
-
 // ===== START =====
 getLocation();
 </script>
