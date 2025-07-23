@@ -19,11 +19,13 @@
     .tabs { display: flex; margin-bottom: 7px;}
     .tab-btn { flex: 1; padding: 9px 0; background: #181e2a; color: #ffe180; border: none; border-radius: 6px 6px 0 0; font-size: 1.08rem; font-weight:600; margin-right:2px; cursor: pointer;}
     .tab-btn.active { background: #ffe180; color: #222c40;}
-    #forecast-cards { display: flex; flex-direction: column; gap: 8px; }
-    .forecast-card { background: #232f47; border-radius: 9px; padding: 11px 6px 11px 14px; display: flex; align-items: center; gap: 11px; font-size: 1rem; box-shadow: 0 1px 4px #0002; cursor: pointer; }
-    .forecast-card .day { font-weight: 600; width: 55px; color: #fff; }
-    .forecast-card .ficon { width: 36px; height: 36px; }
-    .forecast-card .info { flex: 1 1 0; font-size: 1rem; color: #dde5f3; line-height: 1.25; }
+    #forecast-cards { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; }
+    .forecast-card { background: #232f47; border-radius: 9px; min-width: 105px; max-width: 110px; padding: 10px 5px 9px 9px; display: flex; flex-direction: column; align-items: center; font-size: 1rem; box-shadow: 0 1px 4px #0002; cursor: pointer; transition: background 0.13s;}
+    .forecast-card.selected { background: #35446a;}
+    .forecast-card .h { font-weight: 600; color: #ffe180; font-size: 0.93rem;}
+    .forecast-card .ficon { width: 33px; height: 33px; margin: 4px 0;}
+    .forecast-card .info { text-align: center; color: #dde5f3; font-size: 0.95rem; }
+    .forecast-card .temp { font-size: 1.11rem; font-weight: bold;}
     #rain-block { display:none; }
     #rain-title { font-size: 1.07rem; font-weight: 600; color: #85e7ff; margin-bottom: 8px;}
     #rainChart { width: 100%; min-height: 110px; max-width: 490px; margin-bottom:10px;}
@@ -35,7 +37,6 @@
     .rain-table td { color:#dde5f3;}
     .wettest { color:#8ae995; font-weight:600;}
     .driest { color:#fddbdb; font-weight:600;}
-    /* Popup for day details + hourly */
     #popup-bg { position: fixed; z-index: 9999; top:0;left:0;right:0;bottom:0; background: rgba(10,18,36,0.95); display:none; align-items: center; justify-content: center;}
     #popup { background: #222c40; border-radius: 17px; padding: 22px 15px; color: #fff; max-width: 380px; width:95vw; box-shadow: 0 8px 36px #000c; position: relative;}
     #popup .close { position: absolute; top:7px; right: 15px; font-size: 2rem; color: #aad7ff; cursor:pointer; background:none; border:none;}
@@ -53,7 +54,7 @@
     @media (max-width:600px){
       #main {padding:0 1px;}
       .block {padding:10px 3px 12px 7px;}
-      .forecast-card .day { width:38px;}
+      .forecast-card {min-width:70px;max-width:74px;}
       #popup {padding: 13px 2px;}
     }
   </style>
@@ -88,13 +89,13 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const weatherIcons = icon => icon ? `https://cdn.aerisapi.com/wxblox/icons/${icon}` : '';
-const dayOfWeek = d => new Date(d).toLocaleDateString('en-NZ', {weekday:'short'});
+const pad = n => n<10?'0'+n:n;
 const cap = s => (s||'').charAt(0).toUpperCase()+(s||'').slice(1);
 
 function aiAdvice(d){
   let out = [], a = [];
   if(!d.weather) return ["No advice available"];
-  let m = d.month, r = (d.region||'').toLowerCase();
+  let m = d.month, r = d.region?.toLowerCase() || '';
   if(d.precip >= 25) a.push("Very heavy rain – check for flooding and avoid low-lying roads.");
   else if(d.precip >= 10) a.push("Bring waterproofs – outdoor plans could get soggy.");
   if(d.gust >= 65) a.push("Damaging wind gusts. Bring in bins & check trampolines!");
@@ -129,7 +130,6 @@ function aiAdvice(d){
   return out;
 }
 
-// Ask for geolocation once, fallback to :auto if denied
 async function getLocation() {
   return new Promise(resolve => {
     const saved = localStorage.getItem('agoraWeatherCoords');
@@ -156,26 +156,30 @@ function showTab(tab){
   document.getElementById('rainTab').classList.toggle('active', tab=="rain");
 }
 
-// Vertical hourly
-function openPopup(day, allPeriods){
-  let dayNum = null;
-  for (let p of allPeriods) { 
-    let d = new Date(p.dateTimeISO); 
-    if(dayOfWeek(p.dateTimeISO) === day) { dayNum = d.getDay(); break;}
-  }
-  let hPeriods = allPeriods.filter(p2=>new Date(p2.dateTimeISO).getDay()===dayNum);
+// Show hourly popup for selected day (like iOS weather)
+function openPopup(dayISO, periods, header) {
+  // dayISO is date string e.g. 2024-07-24T09:00:00+12:00
+  let dateObj = new Date(dayISO);
+  let y = dateObj.getFullYear(), m = dateObj.getMonth(), d = dateObj.getDate();
+  let hPeriods = periods.filter(p=>{
+    let t = new Date(p.dateTimeISO);
+    return t.getFullYear()===y && t.getMonth()===m && t.getDate()===d;
+  });
+  if(!hPeriods.length) return closePopup();
   let p = hPeriods[0] || {};
   let advice = aiAdvice({
     ...p, month: (new Date(p.dateTimeISO)).getMonth()+1, feelslike: p.feelslikeC||p.tempC, region:p.region||"", weather:p.weather
   });
   let html = `<button class="close" onclick="closePopup()">&times;</button>
-    <div class="pday">${dayOfWeek(p.dateTimeISO)}</div>
+    <div class="pday">${header || (new Date(dayISO)).toLocaleDateString('en-NZ', {weekday:'long', month:'short', day:'numeric'})}</div>
     <div class="pdesc">${cap(p.summary||p.weather||"")}</div>
     ${advice.map(t=>`<div class="advice-tip">${t}</div>`).join('')}
     <div class="hourly-vert">` +
-      hPeriods.map(h=>
-        `<div class="hour-block">
-          <div class="htime">${("0"+new Date(h.dateTimeISO).getHours()).slice(-2)}:00</div>
+      hPeriods.map(h=>{
+        let cloud = h.cloudsCoded ? Math.round((parseInt(h.cloudsCoded.replace(/\D/g,""))/10)*100) : (h.cloudCoverPct ?? '--');
+        cloud = (cloud && !isNaN(cloud)) ? cloud+'%' : '--%';
+        return `<div class="hour-block">
+          <div class="htime">${pad(new Date(h.dateTimeISO).getHours())}:00</div>
           <img class="hicon" src="${weatherIcons(h.icon)}" alt=""/>
           <div class="hinfo">
             <div class="htemp">${Math.round(h.tempC||h.maxTempC||0)}°C</div>
@@ -183,34 +187,42 @@ function openPopup(day, allPeriods){
               <span>${cap(h.weather||'')}</span>
               <span>Wind ${h.windDir||''} ${Math.round(h.windSpeedKPH||0)}km/h</span>
               <span>Gusts ${Math.round(h.windGustKPH||0)}km/h</span>
+              <span>Humidity ${h.humidity || '--'}%</span>
               <span>Rain ${h.precipMM||0}mm</span>
+              <span>Cloud ${cloud}</span>
+              <span>UV ${h.uvIndex!=null?h.uvIndex:'--'}</span>
+              <span>Sunrise: ${h.sunriseISO?new Date(h.sunriseISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--'}</span>
+              <span>Sunset: ${h.sunsetISO?new Date(h.sunsetISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--'}</span>
             </div>
           </div>
         </div>`
-      ).join('') +
+      }).join('') +
     `</div>`;
   document.getElementById('popup').innerHTML = html;
   document.getElementById('popup-bg').style.display = "flex";
 }
 function closePopup(){document.getElementById('popup-bg').style.display="none";}
 
-// --- Main
 (async function(){
-  // Location first
   let coords = await getLocation();
   let locQuery = coords ? `&location=${coords.lat},${coords.lon}` : '';
-  // Fetch current
   let curUrl = coords
     ? `https://data.api.xweather.com/conditions/${coords.lat},${coords.lon}?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
     : `https://data.api.xweather.com/conditions/:auto?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
 
   let cur = await fetch(curUrl).then(r=>r.json());
   let p = cur.success ? cur.response[0].periods[0] : {};
-  let region = cur.success && cur.response[0].loc ? (cur.response[0].loc.city||cur.response[0].loc.region||"Your Area") : "Your Area";
-  document.getElementById('loc').textContent = region;
+  let loc = cur.success && cur.response[0].loc;
+  let city = (loc && loc.city) ? loc.city : '';
+  let region = (loc && loc.adminArea) ? loc.adminArea : '';
+  let district = (loc && loc.region) ? loc.region : '';
+  let shownLoc = city || district || region || (loc && loc.country) || "Unknown area";
+  document.getElementById('loc').textContent = shownLoc;
   document.getElementById('temp').textContent = p.tempC!=null?Math.round(p.tempC)+'°C':'--°C';
   document.getElementById('icon').src = weatherIcons(p.icon);
   document.getElementById('icon').alt = p.weather || "";
+  let cloudPercent = p.cloudsCoded ? Math.round((parseInt(p.cloudsCoded.replace(/\D/g,""))/10)*100) : '--';
+  cloudPercent = (cloudPercent && !isNaN(cloudPercent)) ? cloudPercent+'%' : '--%';
   document.getElementById('details').innerHTML =
     `<span>Feels: ${p.feelslikeC!=null?Math.round(p.feelslikeC)+'°C':'--°C'}</span>
     <span>Humidity: ${p.humidity!=null?p.humidity+'%':'--%'}</span>
@@ -219,38 +231,59 @@ function closePopup(){document.getElementById('popup-bg').style.display="none";}
     <span>Pressure: ${p.pressureMB!=null?Math.round(p.pressureMB)+' hPa':'--'}</span>
     <span>Dew Pt: ${p.dewpointC!=null?Math.round(p.dewpointC)+'°C':'--'}</span>
     <span>Visibility: ${p.visibilityKM!=null?Math.round(p.visibilityKM)+' km':'--'}</span>
-    <span>Cloud: ${p.cloudsCoded?parseInt(p.cloudsCoded.replace(/[^0-9]/g,''))+'%':'--'}</span>
+    <span>Cloud: ${cloudPercent}</span>
     <span>UV: ${p.uvIndex!=null?p.uvIndex:'--'}</span>
     <span>Sunrise: ${p.sunriseISO?new Date(p.sunriseISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--'}</span>
     <span>Sunset: ${p.sunsetISO?new Date(p.sunsetISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--'}</span>`;
-  let dObj = {...p, month:(new Date(p.dateTimeISO||Date.now())).getMonth()+1, feelslike:p.feelslikeC||p.tempC, region:region};
+  let dObj = {...p, month:(new Date(p.dateTimeISO||Date.now())).getMonth()+1, feelslike:p.feelslikeC||p.tempC, region:shownLoc};
   let advices = aiAdvice(dObj);
   document.getElementById('advice-list').innerHTML = advices.map(t=>`<div class="advice-tip">${t}</div>`).join('');
 
-  // Forecast
+  // Forecast: show horizontal hour-by-hour like iOS/Android
   let fcUrl = coords
-    ? `https://data.api.xweather.com/forecasts/${coords.lat},${coords.lon}?format=json&plimit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
-    : `https://data.api.xweather.com/forecasts/:auto?format=json&plimit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
+    ? `https://data.api.xweather.com/forecasts/${coords.lat},${coords.lon}?format=json&plimit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
+    : `https://data.api.xweather.com/forecasts/:auto?format=json&plimit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
 
   let fc = await fetch(fcUrl).then(r=>r.json());
   let periods = fc.success ? fc.response[0].periods : [];
-  let forecastDays = periods.filter((p,i,a)=>i===0||new Date(p.dateTimeISO).getDay()!==new Date(a[i-1].dateTimeISO).getDay());
+
+  // Only show next 24–36 hours horizontally, like iPhone
+  let now = new Date();
+  let hours = periods.filter(p => {
+    let t = new Date(p.dateTimeISO);
+    return t >= now && t <= new Date(now.getTime() + 36*3600*1000);
+  }).slice(0,24);
+
+  // Group by day for popups
+  let days = {};
+  for(let h of periods){
+    let dt = new Date(h.dateTimeISO);
+    let ymd = dt.toISOString().slice(0,10);
+    if(!days[ymd]) days[ymd] = [];
+    days[ymd].push(h);
+  }
+
   let fcDom = document.getElementById('forecast-cards'); fcDom.innerHTML = "";
-  forecastDays.slice(1,8).forEach(p2 => {
+  hours.forEach((h,i) => {
+    let dt = new Date(h.dateTimeISO);
+    let hr = pad(dt.getHours());
+    let daylabel = dt.toLocaleDateString('en-NZ',{weekday:'short'});
+    let cloud = h.cloudsCoded ? Math.round((parseInt(h.cloudsCoded.replace(/\D/g,""))/10)*100) : (h.cloudCoverPct ?? '--');
+    cloud = (cloud && !isNaN(cloud)) ? cloud+'%' : '--%';
     let card = document.createElement('div'); card.className='forecast-card';
-    card.onclick = ()=>openPopup(dayOfWeek(p2.dateTimeISO),periods);
-    card.innerHTML = `<div class="day">${dayOfWeek(p2.dateTimeISO)}</div>
-      <img class="ficon" src="${weatherIcons(p2.icon)}" alt=""/>
+    card.onclick = ()=>openPopup(h.dateTimeISO, periods, daylabel+" "+pad(dt.getDate())+"/"+pad(dt.getMonth()+1));
+    card.innerHTML = `<div class="h">${hr}:00</div>
+      <img class="ficon" src="${weatherIcons(h.icon)}" alt=""/>
       <div class="info">
-        <div><b>${cap(p2.weather||'')}</b></div>
-        <div>${Math.round(p2.maxTempC)}/${Math.round(p2.minTempC)}°C</div>
-        <div>Wind ${p2.windDir||''} ${Math.round(p2.windSpeedKPH||0)}km/h, Gusts ${Math.round(p2.windGustKPH||0)}km/h</div>
-        <div>Rain ${p2.precipMM||0}mm • Hum ${p2.humidity||'--'}%</div>
+        <div class="temp">${Math.round(h.tempC||0)}°C</div>
+        <div>${cap(h.weather||'')}</div>
+        <div>UV ${h.uvIndex!=null?h.uvIndex:'--'}</div>
+        <div>Cloud ${cloud}</div>
       </div>`;
     fcDom.appendChild(card);
   });
 
-  // Rain history
+  // Rain history (unchanged)
   let lat = coords ? coords.lat : (cur.success && cur.response[0].loc ? cur.response[0].loc.lat : null), 
       lon = coords ? coords.lon : (cur.success && cur.response[0].loc ? cur.response[0].loc.long : null);
   let week = [], month = [], ytd = 0;
