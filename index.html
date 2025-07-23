@@ -5,6 +5,7 @@
   <title>AgoraWeather NZ – Pro Mobile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
+    /* === your original CSS unchanged === */
     html, body { background: #181e2a; color: #fff; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
     #main { max-width: 500px; margin: 0 auto; padding: 0 2px 32px 2px; }
     .block { background: #222c40; border-radius: 13px; padding: 12px; margin: 14px 0 20px 0; box-shadow: 0 2px 12px #0007; }
@@ -51,249 +52,205 @@
   </style>
 </head>
 <body>
-<div id="main">
-  <div class="block" id="current">
-    <div id="loc">Loading location…</div>
-    <div class="row">
-      <span class="temp" id="temp">--°C</span>
-      <img id="icon" class="icon" src="" alt=""/>
-    </div>
-    <div class="details">
-      <div class="details-col">
-        <div>Feels: <span id="feels">--°C</span></div>
-        <div>Humidity: <span id="hum">--%</span></div>
-        <div>Wind: <span id="wind">--</span></div>
-        <div>Pressure: <span id="pressure">--</span></div>
-        <div>Visibility: <span id="vis">--</span></div>
-        <div>UV: <span id="uv">--</span></div>
+  <div id="main">
+    <div class="block" id="current">
+      <div id="loc">Loading location…</div>
+      <div class="row">
+        <span class="temp" id="temp">--°C</span>
+        <img id="icon" class="icon" src="" alt=""/>
       </div>
-      <div class="details-col">
-        <div>Gusts: <span id="gust">--</span></div>
-        <div>Dew Pt: <span id="dew">--</span></div>
-        <div>Cloud: <span id="cloud">--</span></div>
-        <div>Sunrise: <span id="sunrise">--</span></div>
-        <div>Sunset: <span id="sunset">--</span></div>
+      <div class="details">
+        <div class="details-col">
+          <div>Feels: <span id="feels">--°C</span></div>
+          <div>Humidity: <span id="hum">--%</span></div>
+          <div>Wind: <span id="wind">--</span></div>
+          <div>Pressure: <span id="pressure">--</span></div>
+          <div>Visibility: <span id="vis">--</span></div>
+          <div>UV: <span id="uv">--</span></div>
+        </div>
+        <div class="details-col">
+          <div>Gusts: <span id="gust">--</span></div>
+          <div>Dew Pt: <span id="dew">--</span></div>
+          <div>Cloud: <span id="cloud">--</span></div>
+          <div>Sunrise: <span id="sunrise">--</span></div>
+          <div>Sunset: <span id="sunset">--</span></div>
+        </div>
       </div>
+      <div class="advice" id="advice1">Getting advice…</div>
+      <div class="advice" id="advice2"></div>
     </div>
-    <div class="advice" id="advice1">Getting advice…</div>
-    <div class="advice" id="advice2"></div>
-  </div>
-  <div id="tabs">
-    <button class="tab-btn active" id="tab-forecast" onclick="switchTab('forecast')">Forecast</button>
-    <button class="tab-btn" id="tab-rain" onclick="switchTab('rain-tab')">Rain History</button>
-  </div>
-  <div id="forecast" class="block active">
-    <div id="forecast-title">Next 7 days</div>
-    <div class="forecast-list" id="forecast-list"></div>
-  </div>
-  <div id="rain-tab" class="block">
-    <div id="rainChartWrap">
+
+    <div id="tabs">
+      <button class="tab-btn active" id="tab-forecast" onclick="switchTab('forecast')">Forecast</button>
+      <button class="tab-btn" id="tab-rain" onclick="switchTab('rain-tab')">Rain History</button>
+    </div>
+
+    <div id="forecast" class="block active">
+      <div id="forecast-title">Next 7 days</div>
+      <div class="forecast-list" id="forecast-list">Loading…</div>
+    </div>
+
+    <div id="rain-tab" class="block">
       <canvas id="rainChart"></canvas>
+      <div class="rain-summary" id="rain-summary">Loading…</div>
     </div>
-    <div class="rain-summary" id="rain-summary"></div>
   </div>
-</div>
-<div id="popup-bg">
-  <div id="popup">
-    <button id="popup-close" onclick="closePopup()">×</button>
-    <div id="popup-title"></div>
-    <div id="popup-summary"></div>
-    <div id="popup-hourly"></div>
+
+  <div id="popup-bg">
+    <div id="popup">
+      <button id="popup-close" onclick="closePopup()">×</button>
+      <div id="popup-title"></div>
+      <div id="popup-summary"></div>
+      <div id="popup-hourly"></div>
+    </div>
   </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-const iconUrl = icon => icon ? `https://cdn.aerisapi.com/wxblox/icons/${icon}.png` : '';
-const cap = s => (s||'').charAt(0).toUpperCase()+(s||'').slice(1);
-const dayOfWeek = d => new Date(d).toLocaleDateString('en-NZ', {weekday:'short'});
-const timeHHMM = d => new Date(d).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'});
-let forecastData = [], hourlyData = {}, locInfo = {};
 
-// Tabs
-function switchTab(tab){
-  document.getElementById('forecast').classList.remove('active');
-  document.getElementById('rain-tab').classList.remove('active');
-  document.getElementById('tab-forecast').classList.remove('active');
-  document.getElementById('tab-rain').classList.remove('active');
-  document.getElementById(tab).classList.add('active');
-  document.getElementById('tab-'+tab.split('-')[0]).classList.add('active');
-}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    /* Helper functions */
+    const iconUrl = i => i?`https://cdn.aerisapi.com/wxblox/icons/${i}.png`: '';
+    const cap = s=>s?s[0].toUpperCase()+s.slice(1):'';
+    const dayOfWeek = d=>new Date(d).toLocaleDateString('en-NZ',{weekday:'short'});
+    const timeHHMM = d=>new Date(d).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'});
 
-// AI Advice function, tailored for NZ
-function aiAdvice(d, locName){
-  let now = new Date(), month = now.getMonth()+1;
-  let a = [];
-  if (month>=6 && month<=8) {
-    if(d.temp<4) a.push(`Winter: Layer up and beware black ice.`);
-    else a.push(`Winter: Cold day ahead in ${locName}, dress warmly.`);
-  }
-  if (month>=12 || month<=2) {
-    if(d.temp>=28) a.push(`Summer heat in ${locName}, stay hydrated.`);
-    if(d.uv>=7) a.push(`High UV in ${locName}, apply sunscreen.`);
-  }
-  if (d.wind>50) a.push(`Strong winds in ${locName}, secure loose outdoor items.`);
-  if (d.precip>=20) a.push(`Heavy rain expected in ${locName}, watch for flooding.`);
-  if(a.length<2) a.push("NZ: Weather can change rapidly. Check again before heading out.");
-  return a.slice(0,2);
-}
+    /* Tab switcher */
+    function switchTab(tab){
+      ['forecast','rain-tab'].forEach(id=>document.getElementById(id).classList.remove('active'));
+      ['tab-forecast','tab-rain'].forEach(id=>document.getElementById(id).classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      document.getElementById('tab-'+tab.split('-')[0]).classList.add('active');
+    }
 
-function getCloudPct(cloudsCoded){
-  if(!cloudsCoded) return "--";
-  if(/CL/i.test(cloudsCoded)) return "10%";
-  if(/SC/i.test(cloudsCoded)) return "35%";
-  if(/BK/i.test(cloudsCoded)) return "65%";
-  if(/OV/i.test(cloudsCoded)) return "95%";
-  return "--";
-}
+    /* AI Advice tailored for NZ */
+    function aiAdvice(d, loc){
+      let m=new Date().getMonth()+1, a=[];
+      if(m>=6&&m<=8){
+        if(d.temp<4) a.push("Winter: Layer up & beware black ice.");
+        else a.push("Winter: Cold day – dress warmly.");
+      }
+      if(m>=12||m<=2){
+        if(d.temp>=28) a.push("Summer heat – stay hydrated.");
+        if(d.uv>6) a.push("High UV – wear sunscreen.");
+      }
+      if(d.wind>50) a.push("Strong winds – secure loose items.");
+      if(d.precip>20) a.push("Heavy rain – watch for flooding.");
+      if(a.length<2) a.push("NZ weather can change rapidly – check again.");
+      return a.slice(0,2);
+    }
 
-// Get location (fallback to NZ center)
-function getNZLocation(cb){
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(pos){
-      cb(pos.coords.latitude, pos.coords.longitude);
-    }, function(){
-      // Fallback to NZ center (Lake Taupo)
-      cb(-38.6857, 176.0702);
-    }, {timeout:9000,maximumAge: 1000*60*15});
-  } else {
-    cb(-38.6857, 176.0702);
-  }
-}
+    /* Get location (fallback center of NZ) */
+    function getLoc(cb){
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(p=>cb(p.coords.latitude,p.coords.longitude),
+          ()=>cb(-38.6857,176.0702), {timeout:9000});
+      } else cb(-38.6857,176.0702);
+    }
 
-// MAIN APP
-getNZLocation(async (lat, lon)=>{
-  let baseURL = 'https://data.api.xweather.com';
+    /* MAIN */
+    getLoc(async(lat,lon)=>{
+      const base='https://data.api.xweather.com';
+      const creds='client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq';
 
-  // --- Current weather ---
-  let urlCur = `${baseURL}/conditions/${lat},${lon}?format=json&plimit=1&filter=minutelyprecip,1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
-  let cur = await fetch(urlCur).then(r=>r.json()).catch(()=>null);
-  let p = cur && cur.success ? cur.response[0].periods[0] : {};
-  let loc = cur && cur.success ? cur.response[0].loc : {};
-  let locName = (loc.city||loc.town||loc.region||loc.country||"New Zealand");
-  if(loc.region && loc.country && loc.region!==loc.country) locName = loc.region+", "+loc.country;
-  document.getElementById('loc').textContent = locName;
+      /* CURRENT CONDITIONS */
+      let curUrl=`${base}/conditions/${lat},${lon}?format=json&plimit=1&filter=minutelyprecip,1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&${creds}`;
+      let cur=await fetch(curUrl).then(r=>r.json()).catch(()=>null);
+      let p=cur&&cur.success?cur.response[0].periods[0]:{};
+      let locObj=cur&&cur.success?cur.response[0].loc:{};
+      let locName=(locObj.city||locObj.region||locObj.country||'New Zealand');
+      document.getElementById('loc').textContent=locName;
+      document.getElementById('temp').textContent=p.tempC!=null?Math.round(p.tempC)+'°C':'--°C';
+      document.getElementById('icon').src=iconUrl(p.icon);
+      document.getElementById('feels').textContent=p.feelslikeC!=null?Math.round(p.feelslikeC)+'°C':'--';
+      document.getElementById('hum').textContent=p.humidity!=null?p.humidity+'%':'--';
+      document.getElementById('wind').textContent=p.windDir?p.windDir+' '+Math.round(p.windSpeedKPH||0)+'km/h':(p.windSpeedKPH!=null?Math.round(p.windSpeedKPH)+'km/h':'--');
+      document.getElementById('pressure').textContent=p.pressureMB!=null?Math.round(p.pressureMB)+'hPa':'--';
+      document.getElementById('vis').textContent=p.visibilityKM!=null?Math.round(p.visibilityKM)+'km':'--';
+      document.getElementById('uv').textContent=p.uvIndex!=null?p.uvIndex:'--';
+      document.getElementById('gust').textContent=p.windGustKPH!=null?Math.round(p.windGustKPH)+'km/h':'--';
+      document.getElementById('dew').textContent=p.dewpointC!=null?Math.round(p.dewpointC)+'°C':'--';
+      document.getElementById('cloud').textContent=p.cloudsCoded?((/CL/i.test(p.cloudsCoded)?10:/SC/i.test(p.cloudsCoded)?35:/BK/i.test(p.cloudsCoded)?65:/OV/i.test(p.cloudsCoded)?95:0)+'%'):'--';
+      document.getElementById('sunrise').textContent=p.sunriseISO?timeHHMM(p.sunriseISO):'--';
+      document.getElementById('sunset').textContent=p.sunsetISO?timeHHMM(p.sunsetISO):'--';
 
-  document.getElementById('temp').textContent = p.tempC!=null?Math.round(p.tempC)+'°C':'--°C';
-  document.getElementById('icon').src = iconUrl(p.icon);
-  document.getElementById('feels').textContent = p.feelslikeC!=null?Math.round(p.feelslikeC)+'°C':'--°C';
-  document.getElementById('hum').textContent = p.humidity!=null?p.humidity+'%':'--%';
-  document.getElementById('wind').textContent = p.windDir?(p.windDir+' '+(p.windSpeedKPH!=null?Math.round(p.windSpeedKPH)+' km/h':'--')):(p.windSpeedKPH!=null?Math.round(p.windSpeedKPH)+' km/h':'--');
-  document.getElementById('pressure').textContent = p.pressureMB!=null?Math.round(p.pressureMB)+' hPa':'--';
-  document.getElementById('vis').textContent = p.visibilityKM!=null?Math.round(p.visibilityKM)+' km':'--';
-  document.getElementById('uv').textContent = p.uvIndex!=null?p.uvIndex:'--';
-  document.getElementById('gust').textContent = p.windGustKPH!=null?Math.round(p.windGustKPH)+' km/h':'--';
-  document.getElementById('dew').textContent = p.dewpointC!=null?Math.round(p.dewpointC)+'°C':'--';
-  document.getElementById('cloud').textContent = getCloudPct(p.cloudsCoded);
-  document.getElementById('sunrise').textContent = p.sunriseISO?timeHHMM(p.sunriseISO):'--';
-  document.getElementById('sunset').textContent = p.sunsetISO?timeHHMM(p.sunsetISO):'--';
+      let adv=aiAdvice({temp:p.tempC||0,uv:p.uvIndex||0,wind:p.windSpeedKPH||0,precip:p.precipMM||0},locName);
+      document.getElementById('advice1').textContent=adv[0];
+      document.getElementById('advice2').textContent=adv[1];
 
-  let adviceArr = aiAdvice({
-    temp:p.tempC||0, uv:p.uvIndex||0, wind:p.windSpeedKPH||0,
-    humidity:p.humidity||0, sunrise:p.sunriseISO, sunset:p.sunsetISO,
-    precip:p.precipMM||0
-  }, locName);
-  document.getElementById('advice1').textContent = adviceArr[0]||'';
-  document.getElementById('advice2').textContent = adviceArr[1]||'';
+      /* DAILY FORECAST */
+      let fcUrl=`${base}/forecasts/${lat},${lon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.maxTempC,periods.minTempC,periods.weather,periods.icon,periods.windSpeedKPH,periods.windDir,periods.windGustKPH,periods.precipMM,periods.humidity,periods.uvIndex,periods.sunriseISO,periods.sunsetISO&${creds}`;
+      let fc=await fetch(fcUrl).then(r=>r.json()).catch(()=>null);
+      let days=fc&&fc.success?fc.response[0].periods:[];
 
-  // --- Forecast data (vertical cards) ---
-  let urlFc = `${baseURL}/forecasts/${lat},${lon}?format=json&plimit=8&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
-  let fc = await fetch(urlFc).then(r=>r.json()).catch(()=>null);
-  forecastData = (fc && fc.success && fc.response[0].periods) ? fc.response[0].periods : [];
-  hourlyData = {}; // filled dynamically
+      let list=document.getElementById('forecast-list');
+      list.innerHTML='';
+      days.forEach((d,i)=>{
+        let card=document.createElement('div');
+        card.className='forecast-card';
+        card.innerHTML=`
+          <div class="day">${dayOfWeek(d.dateTimeISO)}</div>
+          <img class="ficon" src="${iconUrl(d.icon)}"/>
+          <div class="info">
+            <div><b>${cap(d.weather)}</b></div>
+            <div>${Math.round(d.maxTempC)}/${Math.round(d.minTempC)}°C</div>
+            <div>Wind ${d.windDir} ${Math.round(d.windSpeedKPH)}km/h, Gusts ${Math.round(d.windGustKPH)}km/h</div>
+            <div>Rain ${d.precipMM}mm • Hum ${d.humidity}%</div>
+          </div>`;
+        card.onclick=()=>showHourly(days[i], lat, lon, locName);
+        list.append(card);
+      });
 
-  let list = document.getElementById('forecast-list'); list.innerHTML = "";
-  forecastData.slice(0,7).forEach((f,i)=>{
-    let card = document.createElement('div'); card.className = 'forecast-card';
-    card.innerHTML = `<div class="day">${dayOfWeek(f.dateTimeISO)}</div>
-      <img class="ficon" src="${iconUrl(f.icon)}" alt=""/>
-      <div class="info">
-        <div><b>${cap(f.weather||'')}</b></div>
-        <div>${Math.round(f.maxTempC)}/${Math.round(f.minTempC)}°C</div>
-        <div>Wind ${f.windDir||''} ${Math.round(f.windSpeedKPH||0)}km/h, Gusts ${Math.round(f.windGustKPH||0)}km/h</div>
-        <div>Rain ${f.precipMM||0}mm • Hum ${f.humidity||'--'}%</div>
-      </div>`;
-    card.onclick = ()=>showHourlyPopup(f, i, lat, lon, locName);
-    list.appendChild(card);
-  });
-
-  // --- Rain history (7d, 30d, YTD) ---
-  let rain7 = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=7&daily=precipitation_sum&timezone=auto`).then(r=>r.json()).catch(()=>null);
-  let rain30 = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=30&daily=precipitation_sum&timezone=auto`).then(r=>r.json()).catch(()=>null);
-  let rain365 = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=365&daily=precipitation_sum&timezone=auto`).then(r=>r.json()).catch(()=>null);
-
-  let sum = arr=>arr?arr.reduce((a,b)=>a+b,0):0;
-  let l7=rain7?.daily?.time?.map((d,i)=>({date:d,precip:rain7.daily.precipitation_sum[i]}))||[];
-  let l30=rain30?.daily?.precipitation_sum||[];
-  let l365=rain365?.daily?.precipitation_sum||[];
-  let weekTotal = sum(l7.map(x=>x.precip));
-  let monthTotal = sum(l30);
-  let ytdTotal = sum(l365);
-
-  document.getElementById('rain-summary').innerHTML = `
-    <b>Past 7 days:</b> ${weekTotal.toFixed(1)} mm<br>
-    <b>Past 30 days:</b> ${monthTotal.toFixed(1)} mm<br>
-    <b>Year to date:</b> ${ytdTotal.toFixed(1)} mm
-  `;
-
-  let ctx = document.getElementById('rainChart').getContext('2d');
-  new Chart(ctx, {
-    type:'bar',
-    data:{labels:l7.map(x=>x.date.substr(5)),datasets:[{label:"Rain (mm)",data:l7.map(x=>x.precip),backgroundColor:'#85e7ff'}]},
-    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-  });
-});
-
-// Pop-up for forecast day (3-hourly breakdown)
-async function showHourlyPopup(f, dayIdx, lat, lon, locName){
-  let popup = document.getElementById('popup-bg');
-  let title = `${dayOfWeek(f.dateTimeISO)}, ${locName}`;
-  let adviceArr = aiAdvice({
-    temp:f.maxTempC||f.tempC||0, uv:f.uvIndex||0, wind:f.windSpeedKPH||0, humidity:f.humidity||0, sunrise:f.sunriseISO, sunset:f.sunsetISO, precip:f.precipMM||0
-  }, locName);
-
-  // Get hourly forecast for this date (in 3-hr steps)
-  let dt = new Date(f.dateTimeISO);
-  let y=dt.getFullYear(), m=String(dt.getMonth()+1).padStart(2,'0'), d=String(dt.getDate()).padStart(2,'0');
-  let urlHr = `https://data.api.xweather.com/forecasts/${lat},${lon}?format=json&filter=1hr&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&from=${y}-${m}-${d}&to=${y}-${m}-${d}&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
-  let hr = await fetch(urlHr).then(r=>r.json()).catch(()=>null);
-  let hours = hr && hr.success && hr.response[0].periods ? hr.response[0].periods : [];
-  // Filter to 3-hour intervals (e.g. 0:00, 3:00, ...)
-  let filteredHours = hours.filter(h=>{
-    let hh = new Date(h.dateTimeISO).getHours();
-    return hh%3===0;
-  });
-
-  document.getElementById('popup-title').textContent = title;
-  document.getElementById('popup-summary').innerHTML = adviceArr.map(a=>'<div class="advice">'+a+'</div>').join('');
-  let hourlyHtml = '';
-  if(filteredHours.length){
-    hourlyHtml += `<div class="hourly-list">`;
-    filteredHours.forEach(h=>{
-      hourlyHtml += `
-      <div class="hour-row">
-        <span class="htime">${timeHHMM(h.dateTimeISO)}</span>
-        <img class="hicon" src="${iconUrl(h.icon)}"/>
-        <span class="htemp">${h.tempC!=null?Math.round(h.tempC)+'°C':'--'}</span>
-        <span class="hdesc">${cap(h.weather||'')}</span>
-      </div>
-      <div class="hmeta">
-        Wind: ${h.windSpeedKPH!=null?Math.round(h.windSpeedKPH)+'km/h':'--'} | Gusts: ${h.windGustKPH!=null?Math.round(h.windGustKPH)+'km/h':'--'}
-        | Rain: ${h.precipMM!=null?h.precipMM+'mm':'--'} | Humidity: ${h.humidity!=null?h.humidity+'%':'--'}
-        <br>UV: ${h.uvIndex!=null?h.uvIndex:'--'} | Visibility: ${h.visibilityKM!=null?Math.round(h.visibilityKM)+'km':'--'}
-        ${h.sunriseISO?('<br>Sunrise: '+timeHHMM(h.sunriseISO)):""}${h.sunsetISO?(' | Sunset: '+timeHHMM(h.sunsetISO)):""}
-      </div>`;
+      /* RAIN HISTORY */
+      let r7=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=7&daily=precipitation_sum&timezone=auto`).then(r=>r.json()).catch(()=>null);
+      let arr=r7&&r7.daily? r7.daily.precipitation_sum.map((v,i)=>v):[];
+      let daysLabel=r7&&r7.daily? r7.daily.time.map(t=>t.substr(5)): [];
+      let sum=arr.reduce((a,b)=>a+b,0).toFixed(1);
+      document.getElementById('rain-summary').innerHTML=`Past 7 days: <b>${sum}mm</b>`;
+      new Chart(document.getElementById('rainChart').getContext('2d'),{
+        type:'bar',
+        data:{labels:daysLabel,datasets:[{label:'Rain (mm)',data:arr,backgroundColor:'#85e7ff'}]},
+        options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+      });
     });
-    hourlyHtml += "</div>";
-  } else {
-    hourlyHtml = "<div style='color:#e37'>No hour-by-hour forecast found for this day.</div>";
-  }
-  document.getElementById('popup-hourly').innerHTML = hourlyHtml;
-  popup.style.display='flex';
-}
 
-function closePopup(){
-  document.getElementById('popup-bg').style.display='none';
-}
-</script>
+    /* 3-HOURLY POPUP */
+    async function showHourly(day, lat, lon, locName){
+      document.getElementById('popup-bg').style.display='flex';
+      document.getElementById('popup-title').textContent=`${dayOfWeek(day.dateTimeISO)}, ${locName}`;
+      let adv=aiAdvice({temp:day.maxTempC,uv:day.uvIndex,wind:day.windSpeedKPH,precip:day.precipMM},locName);
+      document.getElementById('popup-summary').innerHTML=adv.map(a=>`<div class="advice">${a}</div>`).join('');
+
+      // hourly fetch (1-hour steps, filter then pick every 3rd hour)
+      let base='https://data.api.xweather.com';
+      let creds='client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq';
+      let d=new Date(day.dateTimeISO), y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dt=String(d.getDate()).padStart(2,'0');
+      let urlHr=`${base}/forecasts/${lat},${lon}?format=json&filter=1hr&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.windSpeedKPH,periods.precipMM,periods.humidity,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&from=${y}-${m}-${dt}&to=${y}-${m}-${dt}&${creds}`;
+      let hr=await fetch(urlHr).then(r=>r.json()).catch(()=>null);
+      let hrs=hr&&hr.success?hr.response[0].periods.filter((_,i)=>i%3===0):[];
+
+      let html='';
+      if(hrs.length){
+        html='<div class="hourly-list">';
+        hrs.forEach(h=>{
+          html+=`
+            <div class="hour-row">
+              <span class="htime">${timeHHMM(h.dateTimeISO)}</span>
+              <img class="hicon" src="${iconUrl(h.icon)}"/>
+              <span class="htemp">${Math.round(h.tempC)}°C</span>
+              <span class="hdesc">${cap(h.weather)}</span>
+            </div>
+            <div class="hmeta">
+              Wind ${Math.round(h.windSpeedKPH)}km/h | Rain ${h.precipMM}mm | Hum ${h.humidity}% 
+              <br>UV ${h.uvIndex} | Vis ${Math.round(h.visibilityKM)}km
+            </div>`;
+        });
+        html+='</div>';
+      } else {
+        html=`<div style="color:#e37">No hour-by-hour forecast available.</div>`;
+      }
+      document.getElementById('popup-hourly').innerHTML=html;
+    }
+
+    function closePopup(){ document.getElementById('popup-bg').style.display='none'; }
+  </script>
 </body>
 </html>
