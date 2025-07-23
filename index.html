@@ -94,14 +94,10 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Icon helper
 const weatherIcons = icon => icon ? `https://cdn.aerisapi.com/wxblox/icons/${icon}` : '';
 const cap = s => (s||'').charAt(0).toUpperCase()+(s||'').slice(1);
 const dayOfWeek = d => new Date(d).toLocaleDateString('en-NZ',{weekday:'short'});
-
-// Rotating AI advice: NZ context, rotated daily, never repeated in a session
 const ADVICE_POOL = [
-  // Weather
   "If heavy rain is forecast, avoid parking under trees.",
   "If gusts are over 65km/h, tie down outdoor furniture.",
   "On high UV days, slip slop slap, reapply sunscreen every 2 hours.",
@@ -112,25 +108,21 @@ const ADVICE_POOL = [
   "High humidity means it may feel hotter than forecast.",
   "Rapid pressure drop – big wind or rain shift coming.",
   "If pressure is rising after a front, fine weather follows.",
-  // Outdoor Activities
   "Low rain and winds under 15km/h? Perfect for hiking or a day at the beach.",
   "Fishing best when wind is light and barometer steady.",
   "Surfing? Check gusts – anything above 25km/h makes for choppy waves.",
   "Mountain biking is better after dry spells, check track conditions.",
-  // Seasonal NZ
   "Spring (Sep-Nov): Sudden cold snaps possible, keep a layer handy.",
   "Summer (Dec-Feb): Hydrate often, high UV midday.",
   "Autumn (Mar-May): Leaves on road can make it slippery.",
   "Winter (Jun-Aug): Frost risk mornings, black ice possible.",
   "NZ tip: Weather can change quickly – check again before leaving.",
-  // General Safety
   "Have an emergency kit with torch, water, and batteries ready during storm season.",
   "Charge devices before severe weather.",
   "If a weather warning is issued, monitor local news.",
   "If thunder roars, go indoors!",
   "On high wind days, avoid walking under large trees."
 ];
-// For each day, rotate based on day + year + forecasted max temp, never same for week
 function aiAdvice(context){
   let dayHash = (context.dayIndex||0)+(new Date().getFullYear())+(context.maxTemp||0);
   let pool = ADVICE_POOL.filter((a,i)=>((i+dayHash)%ADVICE_POOL.length)<ADVICE_POOL.length/2);
@@ -138,35 +130,39 @@ function aiAdvice(context){
   return pool[i] || ADVICE_POOL[dayHash%ADVICE_POOL.length];
 }
 
-// Fetch all: gets location, then all weather
-(async function(){
-  let lat, lon, locName = "New Zealand";
-  // First, get accurate lat/lon via browser geolocation if allowed
-  function setLocName(name){document.getElementById('loc').textContent=name;}
-  function failLoc(){setLocName("New Zealand (location not found)");}
+// 1. Accurate browser location + reverse geocode to town/city
+async function getBrowserLocation(){
+  return new Promise((resolve) => {
+    if(localStorage.getItem('agora_lat') && localStorage.getItem('agora_lon')){
+      resolve({lat:parseFloat(localStorage.getItem('agora_lat')),lon:parseFloat(localStorage.getItem('agora_lon'))});
+    } else if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(pos=>{
+        let lat = pos.coords.latitude, lon = pos.coords.longitude;
+        localStorage.setItem('agora_lat',lat); localStorage.setItem('agora_lon',lon);
+        resolve({lat,lon});
+      }, ()=>{resolve(null);}, {timeout:7000});
+    } else resolve(null);
+  });
+}
+
+async function reverseGeocode(lat,lon){
   try {
-    await new Promise((resolve, reject) => {
-      if (localStorage.getItem('agora_lat') && localStorage.getItem('agora_lon')) {
-        lat = parseFloat(localStorage.getItem('agora_lat'));
-        lon = parseFloat(localStorage.getItem('agora_lon'));
-        resolve();
-      } else if(navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos=>{
-          lat = pos.coords.latitude; lon = pos.coords.longitude;
-          localStorage.setItem('agora_lat',lat); localStorage.setItem('agora_lon',lon);
-          resolve();
-        }, reject, {timeout:7000});
-      } else reject();
-    });
-  } catch { failLoc(); lat = -40.9; lon = 174.9; } // NZ center
-  // --------- 1. Current Conditions ---------
+    let res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+    let json = await res.json();
+    return (json && (json.address.city || json.address.town || json.address.village || json.address.hamlet || json.address.suburb || json.address.region || json.address.state || json.display_name)) || "New Zealand";
+  } catch { return "New Zealand"; }
+}
+
+(async function(){
+  let loc = await getBrowserLocation();
+  let lat = loc ? loc.lat : -40.9, lon = loc ? loc.lon : 174.9;
+  let locName = await reverseGeocode(lat,lon);
+  document.getElementById('loc').textContent = locName;
+
+  // 2. Current Conditions (always uses :auto for best match station)
   let cond = await fetch('https://data.api.xweather.com/conditions/:auto?format=json&plimit=1&filter=5min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.windGustKPH,periods.weather,periods.icon,periods.feelslikeC,periods.uvIndex,periods.pressureMB,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
   if(cond && cond.success && cond.response[0]){
-    let c = cond.response[0];
-    let p = c.periods[0];
-    locName = c.loc && c.loc.city ? c.loc.city : (c.loc && c.loc.region ? c.loc.region : "New Zealand");
-    if(c.loc && c.loc.region && c.loc.city) locName += ', '+c.loc.region;
-    setLocName(locName);
+    let c = cond.response[0], p = c.periods[0];
     document.getElementById('temp').textContent = Math.round(p.tempC)+'°C';
     document.getElementById('icon').src = weatherIcons(p.icon);
     document.getElementById('condition').textContent = cap(p.weather||'');
@@ -184,8 +180,8 @@ function aiAdvice(context){
     }
     document.getElementById('cloud').textContent = "Cloud: "+cloudPct;
     document.getElementById('sun').textContent = "Sunrise: "+(p.sunriseISO?new Date(p.sunriseISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--')+" | Sunset: "+(p.sunsetISO?new Date(p.sunsetISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--');
-  } else {failLoc();}
-  // --------- 2. Forecast Cards ---------
+  }
+  // 3. Forecast Cards
   let forecast = await fetch('https://data.api.xweather.com/forecasts/:auto?format=json&filter=day&limit=7&fields=periods.dateTimeISO,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.icon&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
   let fcDom = document.getElementById('forecast'); fcDom.innerHTML = "";
   let dayCards = [];
@@ -205,13 +201,16 @@ function aiAdvice(context){
       fcDom.appendChild(card); dayCards.push(card);
     });
   }
-  // --------- 3. Hourly Popup Handler ---------
+  // 4. Hourly Popups (ALL 24 HOURS, matched by day/month/year)
   window.showHourlyPopup = async function(dayIndex,dateISO,locName,desc,icon,pDay){
-    // Fetch 24-hr forecast for the day (hourly filter)
-    let hourly = await fetch('https://data.api.xweather.com/forecasts/:auto?format=json&filter=hour&limit=24&fields=periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.precipMM,periods.weather,periods.icon,periods.uvIndex,periods.pressureMB,periods.visibilityKM,periods.cloudsCoded,periods.pop&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+    let targetDate = new Date(dateISO);
+    let hourly = await fetch('https://data.api.xweather.com/forecasts/:auto?format=json&filter=hour&limit=48&fields=periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.precipMM,periods.weather,periods.icon,periods.uvIndex,periods.pressureMB,periods.visibilityKM,periods.cloudsCoded,periods.pop&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
     let hours = (hourly && hourly.success && hourly.response[0] && hourly.response[0].periods) ? hourly.response[0].periods : [];
-    let thisDay = new Date(dateISO).getDate();
-    let hourRows = hours.filter(h=>new Date(h.dateTimeISO).getDate()===thisDay);
+    // Fix: Filter by day, month, year for the chosen day
+    let hourRows = hours.filter(h=>{
+      let hd=new Date(h.dateTimeISO);
+      return hd.getFullYear()===targetDate.getFullYear() && hd.getMonth()===targetDate.getMonth() && hd.getDate()===targetDate.getDate();
+    });
     let html = `<tr>
       <th>Time</th><th>Cond.</th><th>Temp</th><th>Feels</th><th>Rain</th><th>Wind</th><th>Gusts</th><th>Hum</th><th>UV</th>
     </tr>`;
@@ -236,7 +235,7 @@ function aiAdvice(context){
   window.closeHourlyPopup=function(){
     document.getElementById('hourly-popup-bg').style.display='none';
   }
-  // --------- 4. Rain History Chart ---------
+  // 5. Rain History
   let rain30 = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=30&daily=precipitation_sum&timezone=auto`).then(r=>r.json());
   let rain365 = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=365&daily=precipitation_sum&timezone=auto`).then(r=>r.json());
   let days30 = rain30.daily && rain30.daily.time ? rain30.daily.time.map((d,i)=>({date:d,precip:rain30.daily.precipitation_sum[i]})) : [];
@@ -250,7 +249,7 @@ function aiAdvice(context){
     data:{labels, datasets:[{label:"Rain (mm)",data:values,backgroundColor:'#85e7ff'}]},
     options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
   });
-  // --------- 5. Alerts, Lightning, Hazards ---------
+  // 6. Alerts, Lightning, Hazards
   let alertR = await fetch('https://data.api.xweather.com/alerts/:auto?format=json&limit=5&fields=details.name,loc,details.color,details.body,details.bodyFull,timestamps.beginsISO,timestamps.expiresISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
   let alerts = (alertR && alertR.success && alertR.response) ? alertR.response : [];
   let alertBadges = [];
@@ -278,6 +277,12 @@ function aiAdvice(context){
     if(r.condition) hazTxts.push("🚗 Road: "+cap(r.condition));
   }
   document.getElementById('hazards').innerHTML = hazTxts.join(" &nbsp; ");
+  // 7. Rotating, location-aware advice
+  let now = new Date();
+  let isSpring = [8,9,10].includes(now.getMonth()); // Sep-Nov in JS months
+  let seasonAdvice = isSpring ? "Spring: Sudden cold snaps, keep a jacket handy." : "";
+  let advice = aiAdvice({dayIndex:now.getDay(),maxTemp:cond?.response[0]?.periods[0]?.maxTempC||0});
+  document.getElementById('advice').innerHTML = [seasonAdvice, advice].filter(Boolean).join("<br>");
 })();
 </script>
 </body>
