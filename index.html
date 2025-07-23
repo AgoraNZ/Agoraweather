@@ -38,8 +38,7 @@
   .rain-table td{color:#dde5f3;}
   .wettest{color:#8ae995;font-weight:600;}
   .driest{color:#fddbdb;font-weight:600;}
-  /* Popup */
-  #popup-bg{position:fixed;inset:0;background:rgba(10,18,36,0.95);display:none;align-items:center;
+  #popup-bg{position:fixed;inset:0;background:rgba(10,18,36,0.97);display:none;align-items:center;
     justify-content:center;z-index:9999;}
   #popup{background:#222c40;border-radius:17px;padding:22px 15px;color:#fff;max-width:380px;width:95vw;
     box-shadow:0 8px 36px #000c;position:relative;}
@@ -96,7 +95,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    // URL helpers
+    // Helper functions
     const iconUrl = ic => ic
       ? `https://cdn.aerisapi.com/wxblox/icons/${ic}.svg`
       : '';
@@ -110,7 +109,7 @@
       document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
     }
 
-    // Build AI advice
+    // Build AI advice (smarter NZ/local/seasonal)
     function aiAdvice(d){
       let tips = [];
       if(d.precipMM>=25) tips.push("Very heavy rain—avoid flood-prone roads.");
@@ -121,16 +120,16 @@
       if(d.tempC<=0) tips.push("Freezing—risk of black ice.");
       if([6,7,8].includes(d.month)) tips.push("Winter—layer up & heat home.");
       if([12,1,2].includes(d.month)) tips.push("Summer—wear sunscreen & drink water.");
+      if(d.region && d.region.toLowerCase().includes('wellington') && d.windSpeedKPH>=35) tips.push("Windy Wellington day—brace for gusts!");
       tips.push("Weather changes fast—check again before leaving.");
       return [...new Set(tips)].slice(0,3);
     }
 
     function openPopup(day, all){
       const idx = all.find(p=>dayOfWeek(p.dateTimeISO)===day);
+      if(!idx) return;
       const targetDay = new Date(idx.dateTimeISO).getDay();
-      const hrs = all
-        .filter(p=> new Date(p.dateTimeISO).getDay()===targetDay)
-        .filter(p=> new Date(p.dateTimeISO).getHours()%2===1);
+      const hrs = all.filter(p=> new Date(p.dateTimeISO).getDay()===targetDay);
 
       let html = `<button class="close" onclick="closePopup()">&times;</button>
         <div class="pday">${dayOfWeek(idx.dateTimeISO)}, ${new Date(idx.dateTimeISO).toLocaleDateString('en-NZ')}</div>
@@ -182,15 +181,16 @@
           `periods.weather,periods.icon,periods.precipMM,periods.pressureMB,periods.uvIndex,`+
           `periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&${AUTH}`
         : `${BASE}/conditions/:auto?format=json&plimit=1&filter=1min`+
-          `&fields=periods.tempC,periods.feelslikeC,periods.dewpointC,`+
+          `&fields=loc,periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.dewpointC,`+
           `periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,`+
           `periods.weather,periods.icon,periods.precipMM,periods.pressureMB,periods.uvIndex,`+
           `periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&${AUTH}`;
 
       const curRes = await fetch(curUrl).then(r=>r.json()).catch(()=>null);
       const p      = curRes?.success ? curRes.response[0].periods[0] : {};
-      const locRaw = coords ? curRes.response[0].loc : {};
+      const locRaw = curRes?.response?.[0]?.loc || {};
       const loc    = locRaw.city||locRaw.town||locRaw.region||locRaw.country||'Your Area';
+      const region = locRaw.region||'';
 
       document.getElementById('loc').textContent = loc;
       document.getElementById('icon').src       = iconUrl(p.icon);
@@ -212,22 +212,27 @@
       document.getElementById('details').innerHTML = details.map(x=>`<span>${x}</span>`).join('');
 
       document.getElementById('advice-list').innerHTML =
-        aiAdvice({ ...p, month:new Date().getMonth()+1 })
+        aiAdvice({ ...p, region, month:new Date().getMonth()+1 })
           .map(t=>`<div class="advice-tip">${t}</div>`).join('');
 
-      // --- 7-DAY FORECAST ---
+      // --- 7-DAY FORECAST (with hourly for each day on click) ---
       const fcUrl = coords
-        ? `${BASE}/forecasts/${coords.lat},${coords.lon}?format=json&filter=day&limit=7`+
-          `&fields=periods.dateTimeISO,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,`+
-          `periods.windSpeedKPH,periods.windDir,periods.windGustKPH,periods.precipMM,periods.humidity,periods.uvIndex&${AUTH}`
-        : `${BASE}/forecasts/:auto?format=json&filter=day&limit=7`+
-          `&fields=periods.dateTimeISO,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,`+
-          `periods.windSpeedKPH,periods.windDir,periods.windGustKPH,periods.precipMM,periods.humidity,periods.uvIndex&${AUTH}`;
+        ? `${BASE}/forecasts/${coords.lat},${coords.lon}?format=json&filter=all&limit=64`+
+          `&fields=periods.dateTimeISO,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.tempC,`+
+          `periods.windSpeedKPH,periods.windDir,periods.windGustKPH,periods.precipMM,periods.humidity,periods.uvIndex,periods.visibilityKM&${AUTH}`
+        : `${BASE}/forecasts/:auto?format=json&filter=all&limit=64`+
+          `&fields=periods.dateTimeISO,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.tempC,`+
+          `periods.windSpeedKPH,periods.windDir,periods.windGustKPH,periods.precipMM,periods.humidity,periods.uvIndex,periods.visibilityKM&${AUTH}`;
 
       const fcRes = await fetch(fcUrl).then(r=>r.json()).catch(()=>null);
-      const days  = fcRes?.success ? fcRes.response[0].periods : [];
+      const periods = fcRes?.success ? fcRes.response[0].periods : [];
+      const days = periods.filter((_,i,a) => {
+        // Pick only 1 entry per day for forecast cards (around midday)
+        const dt = new Date(_.dateTimeISO); return dt.getHours()===12;
+      });
 
       const fcDiv = document.getElementById('forecast-cards');
+      fcDiv.innerHTML = '';
       days.forEach(d=>{
         const card = document.createElement('div');
         card.className = 'forecast-card';
@@ -236,11 +241,11 @@
           <img class="ficon" src="${iconUrl(d.icon)}"/>
           <div class="info">
             <div><b>${cap(d.weather)}</b></div>
-            <div>${Math.round(d.maxTempC)}/${Math.round(d.minTempC)}°C</div>
-            <div>Wind ${d.windDir} ${Math.round(d.windSpeedKPH)}km/h, Gusts ${Math.round(d.windGustKPH)}km/h</div>
-            <div>Rain ${d.precipMM}mm • Hum ${d.humidity}%</div>
+            <div>${Math.round(d.maxTempC||d.tempC)}/${Math.round(d.minTempC||d.tempC)}°C</div>
+            <div>Wind ${d.windDir||''} ${Math.round(d.windSpeedKPH||0)}km/h, Gusts ${Math.round(d.windGustKPH||0)}km/h</div>
+            <div>Rain ${d.precipMM||0}mm • Hum ${d.humidity||'--'}%</div>
           </div>`;
-        card.onclick = ()=>openPopup(dayOfWeek(d.dateTimeISO), days);
+        card.onclick = ()=>openPopup(dayOfWeek(d.dateTimeISO), periods);
         fcDiv.appendChild(card);
       });
 
