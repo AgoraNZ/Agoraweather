@@ -1,992 +1,256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NZ Weather App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NZ Weather</title>
   <style>
     body {
-      margin: 0; padding: 0;
-      background: #121212; color: #f0f0f0;
-      font-family: Arial, sans-serif;
+      margin: 0; padding: 0; background: #181818; color: #fff; font-family: Arial, sans-serif;
     }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      padding: 1rem;
+    .main-container { max-width: 450px; margin: auto; padding: 1rem; }
+    .main-card {
+      background: #232323; border-radius: 20px; box-shadow: 0 2px 24px #0008;
+      margin-top: 1.2rem; padding: 2rem 1rem 1rem 1rem; text-align: center;
     }
+    .city { font-size: 1.35rem; font-weight: bold; letter-spacing: 1px; margin-bottom: 0.5rem; }
+    .weather-icon { width: 90px; height: 90px; display: block; margin: 0 auto; }
+    .temp { font-size: 3.5rem; font-weight: bold; color: #ffd700; }
+    .summary { font-size: 1.3rem; font-weight: 400; margin: 0.5rem 0; color: #fff;}
+    .row { display: flex; justify-content: space-between; margin: 0.3rem 0; font-size: 1rem;}
     .card {
-      background: #1e1e1e;
-      border-radius: 8px;
-      padding: 1rem;
-      margin: 0.5rem 0;
+      background: #222; border-radius: 16px; margin: 1rem 0 0 0; padding: 1.1rem;
+      box-shadow: 0 1px 6px #0006;
     }
-    .card.current { padding: 1.5rem 1rem; }
-    .card.advice { font-style: italic; color: #ddd; }
-    .card.section { cursor: pointer; }
-    .card.section:hover { background: #2a2a2a; }
-    .location-name {
-      font-size: 1.2rem; font-weight: bold;
-      margin-bottom: 0.5rem;
+    .advice { font-size: 1.1rem; font-style: italic; color: #ddd; margin-bottom: 0.3rem; }
+    .tab-btns { display: flex; gap: 1rem; justify-content: center; margin: 1.2rem 0 0.2rem 0;}
+    .tab-btn { background: #333; color: #fff; padding: 0.6rem 1.6rem; border-radius: 20px; border: none; font-size: 1rem; cursor: pointer; transition: background 0.2s;}
+    .tab-btn.active, .tab-btn:hover { background: #ffd700; color: #232323; }
+    .forecast-row { display: flex; gap: 1.2rem; overflow-x: auto; padding-bottom: 0.2rem;}
+    .forecast-card {
+      flex: 0 0 80px; background: #232323; border-radius: 16px;
+      text-align: center; margin-bottom: 0.6rem; cursor: pointer; padding: 0.7rem 0.2rem;
+      transition: box-shadow 0.15s;
     }
-    .current-main {
-      display: flex; align-items: center; justify-content: center;
-      flex-wrap: wrap; /* allow wrap on small screens */
-      text-align: center;
-    }
-    .current-main img.icon-current {
-      width: 100px; height: auto;
-      margin-right: 1rem;
-    }
-    .current-temp {
-      font-size: 4rem; font-weight: 300;
-      margin: 0;
-    }
-    .weather-label {
-      font-size: 1.5rem;
-      font-weight: 500;
-      margin: 0.2rem 0 0.5rem;
-    }
-    .current-details {
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-      line-height: 1.6;
-      display: flex; flex-wrap: wrap;
-    }
-    .current-details div {
-      width: 50%;
-    }
-    .forecast-list .day-item {
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #333;
-      cursor: pointer;
-    }
-    .forecast-list .day-item:last-child {
-      border-bottom: none;
-    }
-    .day-line1 {
-      display: flex;
-      justify-content: space-between;
-      font-weight: 500;
-      margin-bottom: 0.2rem;
-    }
-    .day-line2 {
-      display: flex;
-      align-items: center;
-      font-size: 0.9rem;
-    }
-    .day-line2 img.icon-daily {
-      width: 30px; height: auto;
-      margin-right: 0.5rem;
-    }
-    .other-info div {
-      font-size: 0.9rem;
-      line-height: 1.6;
-    }
-    .other-info .highlight {
-      font-weight: bold;
-    }
-    /* Color indicators for road conditions */
-    .road-green { color: #4caf50; }
-    .road-yellow { color: #ffc107; }
-    .road-red { color: #f44336; }
-    /* Modal overlay */
-    .modal {
-      display: none;
-      position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
-      color: #f0f0f0;
-      z-index: 1000;
-      overflow-y: auto;
-    }
-    .modal-content {
-      max-width: 600px;
-      margin: 50px auto;
-      padding: 1rem;
-    }
-    .close-button {
-      position: fixed;
-      top: 15px; right: 15px;
-      font-size: 2rem;
-      cursor: pointer;
-    }
-    .hourly-title {
-      font-weight: bold;
-      margin: 0.5rem 0 1rem;
-      text-align: center;
-    }
-    .hour-row {
-      display: grid;
-      grid-template-columns: auto auto 1fr auto;
-      align-items: center;
-      column-gap: 8px;
-      padding: 0.3rem 0;
-      border-bottom: 1px solid #333;
-      font-size: 0.9rem;
-    }
-    .hour-row:last-child {
-      border-bottom: none;
-    }
-    .hour-time { width: 3.5rem; } /* ensure some width for time */
-    .hour-temp { font-weight: 500; }
-    .hour-row img.icon-hourly {
-      width: 20px; height: auto;
-    }
-    .rain-title {
-      font-weight: bold;
-      text-align: center;
-      margin: 0.5rem 0 1rem;
-    }
-    .chart {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      align-items: flex-end;
-      gap: 4px;
-      height: 100px;
-      margin: 1rem 0 0.5rem;
-    }
-    .bar {
-      background: #4fc3f7;
-      max-width: 50px;
-      margin: 0 auto;
-      position: relative;
-    }
-    .bar-value {
-      position: absolute;
-      top: -1.2em;
-      width: 100%;
-      text-align: center;
-      font-size: 0.8rem;
-      color: #f0f0f0;
-    }
-    .bar-label {
-      text-align: center;
-      font-size: 0.8rem;
-      margin-top: 0.2rem;
-    }
-    .rain-totals {
-      font-size: 0.9rem;
-      line-height: 1.5;
-      margin-top: 0.5rem;
-    }
-    .rain-totals p { margin: 0.2rem 0; }
-    .attribution {
-      text-align: center;
-      font-size: 0.7rem;
-      color: #888;
-      margin: 1rem 0 0;
-    }
-    /* Loading overlay */
-    #loadingScreen {
-      position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: #000;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      z-index: 2000;
-    }
-    @media (min-width: 600px) {
-      .current-temp { font-size: 5rem; }
-      .weather-label { font-size: 2rem; }
-    }
-    @media (min-width: 1000px) {
-      .current-temp { font-size: 6rem; }
-      .weather-label { font-size: 2.5rem; }
-    }
+    .forecast-card:hover { box-shadow: 0 2px 12px #000a;}
+    .fc-day { font-weight: 700; }
+    .fc-temp { font-weight: 500; margin: 0.2rem 0; font-size: 1.2rem;}
+    .fc-summary { font-size: 0.9rem; color: #ccc;}
+    .extras { margin-top: 1.5rem; }
+    .extras-row { display: flex; gap: 1.3rem; justify-content: center; font-size: 0.97rem;}
+    .extras-item { background: #232323; border-radius: 10px; padding: 0.7rem 1rem; }
+    .rainfall-btn { margin: 1.5rem auto 0 auto; display: block; background: #232323; color: #fff; font-size: 1.1rem; border-radius: 18px; border: none; padding: 0.7rem 1.7rem; box-shadow: 0 1px 7px #0003; cursor: pointer; }
+    .rainfall-btn:hover { background: #ffd700; color: #232323; }
+    .bottom { text-align: center; color: #888; font-size: 0.8rem; margin: 1.5rem 0 0 0; }
+    /* Modal full-screen overlay */
+    .modal-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; background: #181818ee; display: flex; justify-content: center; align-items: center;}
+    .modal-content { background: #222; border-radius: 16px; padding: 2rem 1.2rem 1.2rem 1.2rem; max-width: 96vw; width: 390px; box-shadow: 0 2px 20px #0009; position: relative; }
+    .modal-close { position: absolute; top: 13px; right: 17px; font-size: 2rem; color: #fff; cursor: pointer; }
+    .rain-chart { width: 100%; height: 120px; display: flex; gap: 7px; align-items: flex-end; margin-top: 1.2rem;}
+    .rain-bar { background: #40a5fa; width: 24px; border-radius: 8px 8px 0 0; position: relative;}
+    .rain-bar-label { position: absolute; bottom: -22px; width: 100%; text-align: center; font-size: 0.85rem; color: #fff; }
+    .rain-bar-val { position: absolute; top: -26px; width: 100%; text-align: center; font-size: 0.9rem; color: #ffd700;}
+    .rain-totals { margin-top: 1.2rem; font-size: 1.1rem; color: #fff;}
+    .rain-totals span { color: #ffd700; }
+    @media (max-width: 510px) { .main-container { padding: 0.2rem; } .main-card, .card, .modal-content { padding: 1rem 0.3rem; } }
   </style>
 </head>
 <body>
-  <div id="loadingScreen">Loading...</div>
-  <div class="container" id="appContainer" style="display:none;">
-    <div class="card current" id="currentCard"></div>
-    <div class="card advice" id="adviceCard"></div>
-    <div class="card forecast">
-      <div class="forecast-list" id="forecastList"></div>
-    </div>
-    <div class="card other-info" id="otherInfoCard"></div>
-    <div class="card section" id="rainfallCard">🌧 Rainfall History &raquo;</div>
-    <div class="attribution">Data provided by Vaisala Xweather</div>
+<div class="main-container">
+  <div class="main-card" id="mainCard">
+    <div class="city" id="cityName">Loading...</div>
+    <img id="mainIcon" class="weather-icon" style="display:none;">
+    <div class="temp" id="mainTemp"></div>
+    <div class="summary" id="mainSummary"></div>
+    <div id="mainDetails"></div>
   </div>
-
-  <!-- Hourly Forecast Modal -->
-  <div id="hourlyModal" class="modal">
-    <div class="modal-content" id="hourlyContent"></div>
-    <div id="closeHourly" class="close-button">&times;</div>
+  <div class="advice" id="advice"></div>
+  <div class="tab-btns">
+    <button class="tab-btn active" id="tabForecast">Forecast</button>
+    <button class="tab-btn" id="tabRain">Rainfall</button>
   </div>
-  <!-- Rainfall History Modal -->
-  <div id="rainModal" class="modal">
-    <div class="modal-content" id="rainContent"></div>
-    <div id="closeRain" class="close-button">&times;</div>
+  <div class="card" id="tabContent"></div>
+  <div class="extras">
+    <div class="extras-row" id="extrasRow"></div>
+    <button class="rainfall-btn" onclick="showRainfallModal()">☔ Rainfall History</button>
   </div>
+  <div class="bottom">Data by Vaisala Xweather</div>
+</div>
+<div id="modalBG" class="modal-bg" style="display:none;">
+  <div class="modal-content" id="modalContent"></div>
+  <div class="modal-close" onclick="closeModal()">&times;</div>
+</div>
+<script>
+const clientId = "U8feQfLlcEfcXDfsWZs4C";
+const clientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+const apiBase = "https://data.api.xweather.com";
 
-  <script>
-    // ** Replace with your Xweather API credentials **
-    const clientId = "YOUR_CLIENT_ID";
-    const clientSecret = "YOUR_CLIENT_SECRET";
-    const apiBase = "https://data.api.xweather.com";
+// === Helper functions ===
+function iconUrl(icon) {
+  return `https://cdn.aerisapi.com/wxblox/icons/${icon || "na.png"}`;
+}
+function dayName(dateISO) {
+  let d = new Date(dateISO);
+  return d.toLocaleDateString('en-NZ', {weekday:'short'});
+}
+function pad(n) { return n < 10 ? '0'+n : n; }
+function showRainfallModal() {
+  document.getElementById('modalBG').style.display = '';
+  document.getElementById('modalContent').innerHTML = rainModalHtml;
+}
+function closeModal() { document.getElementById('modalBG').style.display='none'; }
+// ===============
 
-    // Default fallback location (Wellington, NZ) if geolocation not available
-    const fallbackLocation = { name: "Wellington", lat: -41.2889, lon: 174.7772 };
+// =========== Data Fetch Logic ===========
+let userLat, userLon, cityName = "Loading...", rainModalHtml = "";
 
-    // Variables to store data
-    let userLat, userLon, userLocationName;
-    let currentData = null, forecastDaily = null, hourlyData = null;
-    let roadData = null, lightningData = null, cycloneData = null, alertsData = null;
-    let hourlyGroups = [];  // array of { date, hours: [...] }
-    let locationTZ = null;
-    let rainDataPromise = null;
-    let rainDailyData = null, rainWeekTotal = 0, rainMonthTotal = 0, rainYTDTotal = 0;
-
-    // Utility: safe fetch wrapper to handle errors gracefully
-    function safeFetch(url) {
-      return fetch(url)
-        .then(res => res.ok ? res.json() : Promise.reject(res.status))
-        .catch(err => {
-          console.error("Fetch error for", url, err);
-          return null;
-        });
-    }
-
-    // Determine location (geolocation or stored)
-    function initLocation() {
-      const saved = localStorage.getItem("weather_loc");
-      if (saved) {
-        try {
-          const loc = JSON.parse(saved);
-          userLat = loc.lat;
-          userLon = loc.lon;
-          userLocationName = loc.name;
-        } catch(e) { /* ignore parse errors */ }
-      }
-      if (userLat != null && userLon != null) {
-        // Use stored location
-        fetchAllWeatherData();
-      } else {
-        // Use geolocation
-        navigator.geolocation.getCurrentPosition(successLoc, errorLoc, {
-          enableHighAccuracy: true, timeout: 10000
-        });
-      }
-    }
-
-    function successLoc(pos) {
+function setCity(c) {
+  cityName = c;
+  document.getElementById("cityName").textContent = cityName;
+}
+function getLocationAndLoad() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
       userLat = pos.coords.latitude;
       userLon = pos.coords.longitude;
-      fetchAllWeatherData();
-    }
-    function errorLoc(err) {
-      console.warn("Geolocation failed, using fallback.", err);
-      // use fallback default location
-      userLat = fallbackLocation.lat;
-      userLon = fallbackLocation.lon;
-      userLocationName = fallbackLocation.name;
-      fetchAllWeatherData();
-    }
-
-    // Fetch all main data in parallel
-    function fetchAllWeatherData() {
-      // Build endpoint URLs
-      const latlon = `${userLat},${userLon}`;
-      const currentUrl   = `${apiBase}/observations/${latlon}?client_id=${clientId}&client_secret=${clientSecret}`;
-      const forecastUrl  = `${apiBase}/forecasts/${latlon}?client_id=${clientId}&client_secret=${clientSecret}&limit=7`;  // 7-day daily
-      const hourlyUrl    = `${apiBase}/forecasts/${latlon}?client_id=${clientId}&client_secret=${clientSecret}&filter=1hr&limit=168`; // hourly (7 days)
-      const roadUrl      = `${apiBase}/roadweather/${latlon}?client_id=${clientId}&client_secret=${clientSecret}`;
-      const lightningUrl = `${apiBase}/lightning/${latlon}?client_id=${clientId}&client_secret=${clientSecret}&radius=50km&limit=100`;
-      const cycloneUrl   = `${apiBase}/tropicalcyclones/all?client_id=${clientId}&client_secret=${clientSecret}`;
-      const alertsUrl    = `${apiBase}/alerts/${latlon}?client_id=${clientId}&client_secret=${clientSecret}`;
-
-      // Initiate all fetches
-      const pCurrent   = safeFetch(currentUrl);
-      const pForecast  = safeFetch(forecastUrl);
-      const pHourly    = safeFetch(hourlyUrl);
-      const pRoad      = safeFetch(roadUrl);
-      const pLightning = safeFetch(lightningUrl);
-      const pCyclone   = safeFetch(cycloneUrl);
-      const pAlerts    = safeFetch(alertsUrl);
-
-      // Also start rainfall data fetch in background (don't await here)
-      rainDataPromise = fetchRainfallHistory();
-
-      Promise.all([pCurrent, pForecast, pHourly, pRoad, pLightning, pCyclone, pAlerts])
-        .then(results => {
-          [currentData, forecastDaily, hourlyData, roadData, lightningData, cycloneData, alertsData] = results;
-          buildUI();
-        });
-    }
-
-    // Fetch rainfall history data (past week, month, YTD)
-    function fetchRainfallHistory() {
-      // Determine date ranges for YTD (Jan 1 to today) in <=31 day chunks
-      const now = new Date();
-      const year = now.getFullYear();
-      const endDateStr = formatDate(now); // YYYY-MM-DD for today
-      const ranges = [];
-      // Start from Jan 1 of current year
-      let start = new Date(year, 0, 1);
-      while (start <= now) {
-        // end of this chunk = start + 30 days or today if sooner
-        let end = new Date(start.getTime());
-        end.setDate(end.getDate() + 30);
-        if (end > now) end = new Date(now.getTime());
-        // Format range
-        const fromStr = formatDate(start);
-        const toStr = formatDate(end);
-        ranges.push({ from: fromStr, to: toStr });
-        // next chunk start = end + 1 day
-        end.setDate(end.getDate() + 1);
-        start = end;
-      }
-      // Fetch all ranges sequentially to avoid rate flooding
-      let allDaily = [];
-      let promise = Promise.resolve();
-      ranges.forEach(range => {
-        promise = promise.then(() => {
-          const url = `${apiBase}/conditions/summary/${userLat},${userLon}?client_id=${clientId}&client_secret=${clientSecret}&from=${range.from}&to=${range.to}`;
-          return safeFetch(url).then(data => {
-            if (data && data.response && data.response[0] && data.response[0].periods) {
-              allDaily = allDaily.concat(data.response[0].periods);
-            }
-          });
-        });
-      });
-      // After all done, compute values
-      return promise.then(() => {
-        if (!allDaily.length) {
-          return; // no data (unlikely)
-        }
-        // Summation and slicing
-        // Ensure daily entries are sorted by date
-        allDaily.sort((a,b) => new Date(a.dateTimeISO) - new Date(b.dateTimeISO));
-        // Compute totals
-        rainYTDTotal = 0;
-        allDaily.forEach(day => {
-          let precip = day.precip && day.precip.totalMM != null ? day.precip.totalMM : 0;
-          rainYTDTotal += precip;
-        });
-        // Last 30 days
-        let last30 = allDaily.slice(-30);
-        rainMonthTotal = last30.reduce((sum, day) => {
-          let precip = day.precip && day.precip.totalMM != null ? day.precip.totalMM : 0;
-          return sum + precip;
-        }, 0);
-        // Last 7 days
-        let last7 = allDaily.slice(-7);
-        rainWeekTotal = last7.reduce((sum, day) => {
-          let precip = day.precip && day.precip.totalMM != null ? day.precip.totalMM : 0;
-          return sum + precip;
-        }, 0);
-        // Save daily values for chart (last7)
-        rainDailyData = last7;
-      });
-    }
-
-    // Format Date object to YYYY-MM-DD
-    function formatDate(dateObj) {
-      const yyyy = dateObj.getFullYear();
-      const mm = String(dateObj.getMonth()+1).padStart(2, '0');
-      const dd = String(dateObj.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    // Build the UI with fetched data
-    function buildUI() {
-      // Determine location name if not already
-      if (!userLocationName) {
-        if (forecastDaily && forecastDaily.response && forecastDaily.response[0].place) {
-          const place = forecastDaily.response[0].place;
-          if (place.name) {
-            userLocationName = place.name;
-            if (place.country && place.country !== "NZ" && place.country !== "") {
-              userLocationName += `, ${place.country}`;
-            } else if (place.state && place.state !== "") {
-              userLocationName += `, ${place.state}`;
-            }
-          }
-        } 
-        if (!userLocationName && roadData && roadData.response && roadData.response[0].place) {
-          const place = roadData.response[0].place;
-          userLocationName = place.name || userLocationName;
-        }
-        if (!userLocationName) {
-          userLocationName = "Current Location";
-        }
-      }
-      // Save location to localStorage for future
-      try {
-        localStorage.setItem("weather_loc", JSON.stringify({ lat: userLat, lon: userLon, name: userLocationName }));
-      } catch(e) {}
-
-      // Get timezone from road or forecast if available
-      if (roadData && roadData.response && roadData.response[0].profile && roadData.response[0].profile.tz) {
-        locationTZ = roadData.response[0].profile.tz;
-      } else if (forecastDaily && forecastDaily.response && forecastDaily.response[0].profile && forecastDaily.response[0].profile.tz) {
-        locationTZ = forecastDaily.response[0].profile.tz;
-      }
-
-      // Build Current Conditions card
-      let currentHTML = "";
-      if (userLocationName) {
-        currentHTML += `<div class="location-name">${userLocationName}</div>`;
-      }
-      if (currentData && currentData.response) {
-        const obs = currentData.response.ob || currentData.response;
-        const icon = obs.icon || "";
-        const temp = obs.tempC != null ? Math.round(obs.tempC) : null;
-        const feels = obs.feelslikeC != null ? Math.round(obs.feelslikeC) : null;
-        const humid = obs.humidity;
-        const windSpeed = obs.windSpeedKPH;
-        const windDir = obs.windDir;
-        const pressure = obs.pressureMB || obs.altimeterMB;
-        const visibility = obs.visibilityKM;
-        const dew = obs.dewpointC;
-        const conditionText = obs.weather || obs.weatherPrimary || "";
-        // Current icon URL
-        let iconHTML = "";
-        if (icon) {
-          const iconUrl = `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
-          iconHTML = `<img src="${iconUrl}" alt="${conditionText}" class="icon-current weather-icon">`;
-        }
-        // Temperature and condition
-        let tempHTML = temp != null ? `<div class="current-temp">${temp}°C</div>` : "";
-        let labelHTML = conditionText ? `<div class="weather-label">${conditionText}</div>` : "";
-        // Current details (feels, humidity, etc.)
-        let detailsHTML = `<div class="current-details">`;
-        if (feels != null) detailsHTML += `<div>Feels like: ${feels}°C</div>`;
-        if (humid != null) detailsHTML += `<div>Humidity: ${humid}%</div>`;
-        if (windSpeed != null) {
-          detailsHTML += `<div>Wind: ${Math.round(windSpeed)} km/h`;
-          if (windDir) detailsHTML += ` ${windDir}`;
-          detailsHTML += `</div>`;
-        }
-        if (pressure != null) detailsHTML += `<div>Pressure: ${pressure} hPa</div>`;
-        if (visibility != null) detailsHTML += `<div>Visibility: ${Math.round(visibility * 10)/10} km</div>`;
-        if (dew != null) detailsHTML += `<div>Dew point: ${Math.round(dew)}°C</div>`;
-        // Sunrise/sunset times
-        if (obs.sunriseISO && obs.sunsetISO) {
-          try {
-            const sunOptions = { hour: 'numeric', minute: 'numeric' };
-            if (locationTZ) sunOptions.timeZone = locationTZ;
-            const sunriseTime = new Date(obs.sunriseISO).toLocaleTimeString([], sunOptions);
-            const sunsetTime = new Date(obs.sunsetISO).toLocaleTimeString([], sunOptions);
-            detailsHTML += `<div>Sunrise: ${sunriseTime}</div>`;
-            detailsHTML += `<div>Sunset: ${sunsetTime}</div>`;
-          } catch(e) {}
-        }
-        // Cloud cover
-        if (obs.sky != null) {
-          detailsHTML += `<div>Cloud cover: ${obs.sky}%</div>`;
-        }
-        detailsHTML += `</div>`; // close current-details
-        // Combine main current section
-        currentHTML += `<div class="current-main">${iconHTML}<div>${tempHTML}${labelHTML}</div></div>${detailsHTML}`;
-      } else {
-        currentHTML += `<div class="location-name">${userLocationName}</div><p>Weather data unavailable.</p>`;
-      }
-      document.getElementById("currentCard").innerHTML = currentHTML;
-
-      // Build AI Advice card
-      let adviceText = "";
-      try {
-        adviceText = generateDailyAdvice();
-      } catch(e) { console.error("Advice generation error", e); }
-      document.getElementById("adviceCard").textContent = adviceText;
-
-      // Build 7-day forecast list
-      let forecastHTML = "";
-      if (forecastDaily && forecastDaily.response) {
-        const periods = forecastDaily.response[0].periods;
-        periods.forEach((day, idx) => {
-          // Determine day label (Today/Tomorrow or weekday name)
-          let dateObj = new Date(day.dateTimeISO || day.timestamp * 1000);
-          if (locationTZ) {
-            // adjust dateObj to location's date (in case user in different tz)
-            dateObj = new Date(dateObj.toLocaleString("en-US", { timeZone: locationTZ }));
-          }
-          let label;
-          const today = new Date();
-          if (locationTZ) {
-            // adjust "today" to location tz as well
-            today = new Date(today.toLocaleString("en-US", { timeZone: locationTZ }));
-          }
-          const diffDays = Math.floor((dateObj - new Date(today.setHours(0,0,0,0))) / 86400000);
-          if (idx === 0 && diffDays === 0) {
-            label = "Today";
-          } else if (idx === 1 || diffDays === 1) {
-            label = "Tomorrow";
-          } else {
-            // weekday name
-            label = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-          }
-          // Format date part for display (optional, e.g. "Mon 24")
-          // let dateStr = dateObj.getDate();
-          // label += ` ${dateStr}`;
-          // Condition and temperatures
-          const high = day.maxTempC != null ? Math.round(day.maxTempC) : null;
-          const low = day.minTempC != null ? Math.round(day.minTempC) : null;
-          const cond = day.weatherPrimary || day.weather || "";
-          const icon = day.icon || "";
-          // Rain chance if available
-          const pop = day.pop;
-          // Build HTML for the day
-          let tempsText = "";
-          if (high != null && low != null) {
-            tempsText = `${high}° / ${low}°`;
-          } else if (day.tempC != null) {
-            tempsText = `${Math.round(day.tempC)}°`;
-          }
-          let iconHTML = "";
-          if (icon) {
-            const iconUrl = `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
-            iconHTML = `<img src="${iconUrl}" alt="${cond}" class="icon-daily weather-icon">`;
-          }
-          forecastHTML += `<div class="day-item" data-index="${idx}">
-                              <div class="day-line1">
-                                <span>${label}</span>
-                                <span>${tempsText}</span>
-                              </div>
-                              <div class="day-line2">
-                                ${iconHTML}
-                                <span class="day-desc">${cond}</span>
-                              </div>
-                           </div>`;
-        });
-      } else {
-        forecastHTML = "<p>Forecast data unavailable.</p>";
-      }
-      const forecastListEl = document.getElementById("forecastList");
-      forecastListEl.innerHTML = forecastHTML;
-
-      // Build Other Info card (Lightning, Road, Cyclone, Alerts)
-      let otherHTML = "";
-      // Lightning
-      if (lightningData && lightningData.response) {
-        const strikes = lightningData.response.length;
-        if (strikes > 0) {
-          otherHTML += `<div>Lightning: ⚡ ${strikes} strikes in the area (last 5 min)</div>`;
-        } else {
-          otherHTML += `<div>Lightning: None nearby</div>`;
-        }
-      } else {
-        otherHTML += `<div>Lightning: Data not available</div>`;
-      }
-      // Road conditions
-      if (roadData && roadData.response && roadData.response[0].periods) {
-        const roadPeriod = roadData.response[0].periods[0];
-        const summary = roadPeriod.summary;
-        let roadText = "Road conditions: ";
-        if (summary) {
-          roadText += summary.charAt(0) + summary.slice(1).toLowerCase(); // e.g. "GREEN" -> "Green"
-          // Add meaning if needed
-          if (summary === "GREEN") roadText += " (Dry/Good)";
-          if (summary === "YELLOW") roadText += " (Caution)";
-          if (summary === "RED") roadText += " (Adverse)";
-          // Color highlight
-          let cls = summary === "GREEN" ? "road-green" : summary === "YELLOW" ? "road-yellow" : summary === "RED" ? "road-red" : "";
-          if (cls) roadText = `<span class="${cls}">${roadText}</span>`;
-        } else {
-          roadText += "Unknown";
-        }
-        otherHTML += `<div>${roadText}</div>`;
-      } else {
-        otherHTML += `<div>Road conditions: N/A</div>`;
-      }
-      // Cyclone activity
-      if (cycloneData && cycloneData.response) {
-        const storms = cycloneData.response;
-        // Filter storms potentially relevant to NZ (southern hemisphere around Pacific/Australia)
-        const activeCyclones = storms.filter(storm => {
-          if (!storm.profile) return false;
-          const lat = storm.profile.lat;
-          const basin = storm.profile.currentBasin;
-          // If storm latitude is south or basin suggests South Pacific/Australia
-          if (lat != null && lat < 0) {
-            // Also filter out if basin clearly unrelated (e.g. South Indian far away?)
-            if (basin && basin.startsWith("SI")) { // South Indian
-              return false; 
-            }
-            return true;
-          }
-          return false;
-        });
-        if (activeCyclones.length > 0) {
-          activeCyclones.forEach(storm => {
-            const name = storm.profile.name || "Unnamed";
-            const type = storm.profile.stormType || "Cyclone";
-            const cat = storm.profile.category; // maybe Saffir-Simpson cat for hurricanes, or severity
-            let cycloneLine = `Cyclone: 🌀 ${type} ${name}`;
-            if (storm.profile.maxCat || cat) {
-              cycloneLine += ` (Category ${storm.profile.maxCat || cat})`;
-            }
-            otherHTML += `<div>${cycloneLine}</div>`;
-          });
-        } else {
-          otherHTML += `<div>Cyclone activity: None</div>`;
-        }
-      } else {
-        otherHTML += `<div>Cyclone activity: N/A</div>`;
-      }
-      // Weather alerts
-      if (alertsData && alertsData.response) {
-        if (alertsData.response.length > 0) {
-          const alert = alertsData.response[0];
-          const headline = alert.details ? alert.details.headline : alert.weatherPrimary;
-          const evt = alert.event || alert.details && alert.details.event;
-          let alertText = headline || evt || "Weather Alert";
-          otherHTML += `<div>Weather alerts: ⚠️ <span class="highlight">${alertText}</span></div>`;
-        } else {
-          otherHTML += `<div>Weather alerts: None</div>`;
-        }
-      } else {
-        otherHTML += `<div>Weather alerts: N/A</div>`;
-      }
-      document.getElementById("otherInfoCard").innerHTML = otherHTML;
-
-      // Process hourly data for modal usage
-      if (hourlyData && hourlyData.response) {
-        const periods = hourlyData.response[0].periods;
-        // Group hourly by date
-        const groupsMap = {};
-        periods.forEach(hour => {
-          const iso = hour.dateTimeISO;
-          // Get date part (YYYY-MM-DD) in location TZ
-          let dateKey;
-          if (locationTZ) {
-            // convert ISO to same date string in location tz
-            let dateObj = new Date(iso);
-            const localeDateStr = dateObj.toLocaleDateString('en-US', { timeZone: locationTZ });
-            // localeDateStr like "M/D/YYYY" - better to create key as ISO date:
-            const parts = localeDateStr.split('/');
-            if (parts.length === 3) {
-              const [mon, day, year] = parts;
-              dateKey = `${year}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-            } else {
-              dateKey = iso.slice(0, 10); // fallback
-            }
-          } else {
-            dateKey = iso.slice(0, 10);
-          }
-          if (!groupsMap[dateKey]) groupsMap[dateKey] = [];
-          groupsMap[dateKey].push(hour);
-        });
-        // Sort groups by date and limit to match daily days
-        const allDates = Object.keys(groupsMap).sort();
-        // If more groups than daily days (like partial extra day), drop the last
-        if (forecastDaily && forecastDaily.response) {
-          const dailyCount = forecastDaily.response[0].periods.length;
-          if (allDates.length > dailyCount) {
-            // drop extra furthest future dates beyond daily range
-            allDates.splice(dailyCount);
-          }
-        }
-        hourlyGroups = allDates.map(date => {
-          // sort hours in each group by time
-          groupsMap[date].sort((a,b) => new Date(a.dateTimeISO) - new Date(b.dateTimeISO));
-          return { date: date, hours: groupsMap[date] };
-        });
-      }
-
-      // Attach event handlers for forecast day items
-      document.querySelectorAll('.day-item').forEach(el => {
-        el.addEventListener('click', () => {
-          const idx = Number(el.getAttribute('data-index'));
-          showHourlyModal(idx);
-        });
-      });
-      // Handler for Rainfall History card
-      document.getElementById('rainfallCard').addEventListener('click', () => {
-        showRainfallModal();
-      });
-      // Modal close buttons
-      document.getElementById('closeHourly').onclick = () => {
-        document.getElementById('hourlyModal').style.display = 'none';
-      };
-      document.getElementById('closeRain').onclick = () => {
-        document.getElementById('rainModal').style.display = 'none';
-      };
-
-      // Reveal the app content and hide loading screen
-      document.getElementById('appContainer').style.display = 'block';
-      document.getElementById('loadingScreen').style.display = 'none';
-    }
-
-    // Show hourly forecast modal for given day index
-    function showHourlyModal(dayIndex) {
-      if (!hourlyGroups.length) {
-        alert("Hourly data not available.");
-        return;
-      }
-      const group = hourlyGroups[dayIndex];
-      if (!group) {
-        alert("No hourly data for this day.");
-        return;
-      }
-      // Title with date
-      let dateLabel;
-      try {
-        const dateObj = new Date(group.date);
-        const options = { weekday: 'long', month: 'long', day: 'numeric' };
-        if (locationTZ) options.timeZone = locationTZ;
-        dateLabel = dateObj.toLocaleDateString('en-US', options);
-      } catch(e) {
-        dateLabel = group.date;
-      }
-      let modalHTML = `<div class="hourly-title">${dateLabel}</div>`;
-      // List each hour
-      group.hours.forEach(hour => {
-        // Format time and details
-        let timeStr;
-        try {
-          const timeOpt = { hour: 'numeric', minute: 'numeric' };
-          if (locationTZ) timeOpt.timeZone = locationTZ;
-          timeStr = new Date(hour.dateTimeISO).toLocaleTimeString([], timeOpt);
-        } catch(e) {
-          timeStr = hour.dateTimeISO.slice(11,16);
-        }
-        const temp = hour.tempC != null ? Math.round(hour.tempC) + "°C" : "";
-        const cond = hour.weatherPrimary || hour.weather || "";
-        const icon = hour.icon || "";
-        let iconHTML = "";
-        if (icon) {
-          const iconUrl = `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
-          iconHTML = `<img src="${iconUrl}" alt="${cond}" class="icon-hourly weather-icon">`;
-        }
-        modalHTML += `<div class="hour-row">
-                        <span class="hour-time">${timeStr}</span>
-                        ${iconHTML}
-                        <span class="hour-desc">${cond}</span>
-                        <span class="hour-temp">${temp}</span>
-                      </div>`;
-      });
-      const hourlyContent = document.getElementById('hourlyContent');
-      hourlyContent.innerHTML = modalHTML;
-      document.getElementById('hourlyModal').style.display = 'block';
-    }
-
-    // Show rainfall history modal
-    function showRainfallModal() {
-      const rainContentEl = document.getElementById('rainContent');
-      // If data not ready yet, show loading inside modal until ready
-      if (!rainDailyData) {
-        rainContentEl.innerHTML = `<p>Loading rainfall history...</p>`;
-        document.getElementById('rainModal').style.display = 'block';
-        // When promise resolves, build chart
-        rainDataPromise.then(() => {
-          buildRainContent();
-        });
-      } else {
-        buildRainContent();
-        document.getElementById('rainModal').style.display = 'block';
-      }
-    }
-
-    function buildRainContent() {
-      if (!rainDailyData) {
-        document.getElementById('rainContent').innerHTML = `<p>Rainfall data unavailable.</p>`;
-        return;
-      }
-      // Ensure we have up to 7 days of daily data
-      const days = rainDailyData;
-      // Chart bars
-      let barsHTML = `<div class="chart">`;
-      // Find max precip for scaling
-      let maxPrecip = 0;
-      days.forEach(day => {
-        const val = day.precip && day.precip.totalMM != null ? day.precip.totalMM : 0;
-        if (val > maxPrecip) maxPrecip = val;
-      });
-      // Avoid zero max
-      if (maxPrecip === 0) maxPrecip = 1;
-      days.forEach(day => {
-        const precip = day.precip && day.precip.totalMM != null ? day.precip.totalMM : 0;
-        const barHeight = Math.round((precip / maxPrecip) * 100);
-        // Determine day label (weekday)
-        let label = "";
-        try {
-          const dateObj = new Date(day.dateTimeISO);
-          const opt = { weekday: 'short' };
-          if (locationTZ) opt.timeZone = locationTZ;
-          label = dateObj.toLocaleDateString('en-US', opt);
-        } catch(e) {
-          label = day.dateTimeISO.slice(5,10);
-        }
-        // Limit label to 3 letters
-        if (label.length > 3) label = label.slice(0,3);
-        barsHTML += `<div class="bar-container" style="position: relative;">
-                       <div class="bar" style="height: ${barHeight}%;">
-                         <div class="bar-value">${Math.round(precip)}mm</div>
-                       </div>
-                       <div class="bar-label">${label}</div>
-                     </div>`;
-      });
-      barsHTML += `</div>`;
-      // Totals text
-      let totalsHTML = `<div class="rain-totals">`;
-      totalsHTML += `<p>Past 7 days: ${Math.round(rainWeekTotal)} mm</p>`;
-      totalsHTML += `<p>Past 30 days: ${Math.round(rainMonthTotal)} mm</p>`;
-      totalsHTML += `<p>Year to date: ${Math.round(rainYTDTotal)} mm</p>`;
-      totalsHTML += `</div>`;
-      // Title
-      const titleHTML = `<div class="rain-title">Rainfall History</div>`;
-      document.getElementById('rainContent').innerHTML = titleHTML + barsHTML + totalsHTML;
-    }
-
-    // Generate AI advice string for today
-    function generateDailyAdvice() {
-      // Gather needed context
-      let condition = "", maxTemp = null, minTemp = null;
-      let windy = false, stormy = false, rainy = false, snowy = false;
-      let uvIndexHigh = false;
-      // Use today's forecast if available
-      if (forecastDaily && forecastDaily.response) {
-        const todayForecast = forecastDaily.response[0].periods[0];
-        condition = (todayForecast.weatherPrimary || todayForecast.weather || "").toLowerCase();
-        maxTemp = todayForecast.maxTempC;
-        minTemp = todayForecast.minTempC;
-        if (todayForecast.pop && todayForecast.pop >= 50) rainy = true;
-        // Identify storms
-        if (condition.includes("thunder") || condition.includes("storm")) {
-          stormy = true;
-        }
-        if (condition.includes("rain") || condition.includes("shower")) {
-          rainy = true;
-        }
-        if (condition.includes("snow")) {
-          snowy = true;
-        }
-        if (todayForecast.windSpeedMaxKPH && todayForecast.windSpeedMaxKPH >= 50) {
-          windy = true;
-        }
-      }
-      // If no forecast, use current conditions fallback
-      if (!forecastDaily && currentData && currentData.response) {
-        const obs = currentData.response.ob || currentData.response;
-        condition = (obs.weatherPrimary || obs.weather || "").toLowerCase();
-        maxTemp = obs.tempC;
-        minTemp = obs.tempC;
-        if (condition.includes("thunder") || condition.includes("storm")) stormy = true;
-        if (condition.includes("rain") || condition.includes("shower")) rainy = true;
-        if (condition.includes("snow")) snowy = true;
-        if (obs.windSpeedKPH && obs.windSpeedKPH >= 50) windy = true;
-      }
-      // Check UV index if current solar radiation suggests clear midday (simple heuristic)
-      if (currentData && currentData.response) {
-        const obs = currentData.response.ob || currentData.response;
-        if (obs.solradWM2 && obs.solradWM2 > 500) { // bright sun
-          uvIndexHigh = true;
-        }
-      }
-      // Determine season in NZ
-      const month = (new Date()).getMonth() + 1;
-      let season;
-      if (month >= 12 || month <= 2) {
-        season = "summer";
-      } else if (month >= 3 && month <= 5) {
-        season = "autumn";
-      } else if (month >= 6 && month <= 8) {
-        season = "winter";
-      } else {
-        season = "spring";
-      }
-      // Advice pools
-      const advices = {
-        storm: [
-          "Thunderstorms possible today - best to stay indoors during the storm.",
-          "Stormy weather on the way - secure loose items and avoid driving in downpours.",
-          "Thunder and lightning forecast - a good day to curl up inside with a book."
-        ],
-        rain: [
-          "It’s going to be wet - don't forget an umbrella and drive carefully on slippery roads.",
-          "Rain is expected today - a good day for indoor activities!",
-          "Showers are coming - keep a raincoat handy when heading out."
-        ],
-        snow: [
-          "Snow in the forecast - travel only if necessary and stay warm out there.",
-          "Wintry weather with possible snow - wrap up well and be cautious on the roads.",
-          "Snow expected - time to get those gloves and enjoy a hot drink."
-        ],
-        wind: [
-          "Strong winds today - secure outdoor items like bins and furniture.",
-          "It's very windy - take care if driving high-sided vehicles and watch for fallen branches.",
-          "Blustery conditions expected - hold on to your hat!"
-        ],
-        cold: [
-          "It's quite cold today - wear extra layers and stay warm.",
-          "Chilly day ahead - a good day for a warm soup or hot chocolate.",
-          "Frosty conditions - watch out for ice and bundle up."
-        ],
-        hot: [
-          "A warm day is on the way - stay hydrated and wear sunscreen.",
-          "It's going to be hot - light clothing and plenty of water are recommended.",
-          "Very warm temperatures expected - be sure to slip, slop, slap (hat and sunscreen) if you're outside."
-        ],
-        uv: [
-          "UV levels are high - don't forget to wear sunscreen and a hat if you're outdoors.",
-          "The sun is strong today - apply SPF and seek shade during peak hours.",
-          "High UV index - protect your skin with sunscreen and reapply regularly."
-        ],
-        summer: [
-          "Beautiful summer weather - perfect for a beach day or BBQ!",
-          "A classic Kiwi summer day - a good chance to fire up the barbie.",
-          "Warm and sunny - ideal weather to enjoy the outdoors, just remember your sun protection."
-        ],
-        autumn: [
-          "Mild autumn weather - great time for a walk among the falling leaves.",
-          "Cool and clear - a good day to tidy up the garden before winter.",
-          "Crisp autumn day - enjoy the changing colours and maybe rake some leaves."
-        ],
-        winter: [
-          "Clear winter day - make the most of the sunshine but keep a coat handy.",
-          "Cold and dry - perfect weather for a warm cuppa or soup.",
-          "No extreme weather today - a good day to catch up on indoor chores and stay cozy."
-        ],
-        spring: [
-          "Pleasant spring day - perfect for gardening or enjoying the blooming flowers.",
-          "Mild and clear - great time for a spring clean or an outdoor stroll.",
-          "Lovely spring weather - enjoy the outdoors, but keep an eye on those spring allergies!"
-        ]
-      };
-      // Choose category
-      let category;
-      if (stormy) {
-        category = "storm";
-      } else if (rainy) {
-        category = "rain";
-      } else if (snowy) {
-        category = "snow";
-      } else if (windy) {
-        category = "wind";
-      } else if (maxTemp != null && maxTemp >= 25) {
-        category = "hot";
-      } else if (minTemp != null && minTemp <= 0) {
-        category = "cold";
-      } else if (uvIndexHigh && season === "summer") {
-        category = "uv";
-      } else {
-        // choose generic seasonal advice
-        category = season;
-      }
-      let adviceOptions = advices[category] || [];
-      if (!adviceOptions.length) {
-        adviceOptions = ["Have a great day!"]; // fallback generic
-      }
-      // Avoid repeating yesterday's advice
-      const lastAdvice = localStorage.getItem("last_advice");
-      let choice = adviceOptions[Math.floor(Math.random() * adviceOptions.length)];
-      if (adviceOptions.length > 1 && choice === lastAdvice) {
-        // pick a different one
-        choice = adviceOptions.filter(a => a !== lastAdvice)[0] || choice;
-      }
-      // Save this advice
-      try { localStorage.setItem("last_advice", choice); } catch(e) {}
-      return choice;
-    }
-
-    // Initialize
-    initLocation();
-  </script>
+      fetchCityName(userLat, userLon);
+      loadWeather(userLat, userLon);
+    }, () => {
+      // Default to Auckland CBD
+      userLat = -36.8485; userLon = 174.7633;
+      setCity("Auckland");
+      loadWeather(userLat, userLon);
+    });
+  } else {
+    userLat = -36.8485; userLon = 174.7633;
+    setCity("Auckland");
+    loadWeather(userLat, userLon);
+  }
+}
+function fetchCityName(lat, lon) {
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+    .then(res => res.json())
+    .then(j => {
+      let city = j.address.city || j.address.town || j.address.village || j.address.state_district || "New Zealand";
+      setCity(city);
+    })
+    .catch(() => setCity("New Zealand"));
+}
+function loadWeather(lat, lon) {
+  // Conditions
+  fetch(`${apiBase}/conditions/${lat},${lon}?format=json&client_id=${clientId}&client_secret=${clientSecret}`)
+    .then(r=>r.json()).then(j=>{
+      let ob = j.response && j.response[0] && j.response[0].periods[0];
+      if (!ob) return setMainCardUnavailable();
+      document.getElementById("mainIcon").src = iconUrl(ob.icon);
+      document.getElementById("mainIcon").style.display = '';
+      document.getElementById("mainTemp").textContent = Math.round(ob.tempC)+"°";
+      document.getElementById("mainSummary").textContent = ob.weatherPrimary || ob.weather || "";
+      document.getElementById("mainDetails").innerHTML =
+        `<div class="row"><span>Feels:</span><span>${Math.round(ob.feelslikeC)}°</span></div>
+         <div class="row"><span>Humidity:</span><span>${ob.humidity}%</span></div>
+         <div class="row"><span>Wind:</span><span>${ob.windSpeedKPH||0} km/h ${ob.windDir||""}</span></div>
+         <div class="row"><span>Pressure:</span><span>${ob.pressureMB||""} hPa</span></div>
+         <div class="row"><span>Sunrise:</span><span>${(ob.sunriseISO||"").slice(11,16)}</span></div>
+         <div class="row"><span>Sunset:</span><span>${(ob.sunsetISO||"").slice(11,16)}</span></div>`;
+    })
+    .catch(() => setMainCardUnavailable());
+  // Forecast
+  fetch(`${apiBase}/forecasts/${lat},${lon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.maxTempC,periods.minTempC,periods.icon,periods.weatherPrimary&client_id=${clientId}&client_secret=${clientSecret}`)
+    .then(r=>r.json()).then(j=>{
+      let fc = j.response && j.response[0] && j.response[0].periods;
+      if (!fc) return document.getElementById("tabContent").innerHTML = "<div style='text-align:center;'>Forecast not available.</div>";
+      document.getElementById("tabContent").innerHTML =
+        `<div class="forecast-row">` +
+        fc.map(day =>
+          `<div class="forecast-card">
+             <div class="fc-day">${dayName(day.dateTimeISO)}</div>
+             <img src="${iconUrl(day.icon)}" width="44" style="margin:0.2rem 0">
+             <div class="fc-temp">${Math.round(day.maxTempC)}°/${Math.round(day.minTempC)}°</div>
+             <div class="fc-summary">${day.weatherPrimary||""}</div>
+           </div>`
+        ).join('') +
+        `</div>`;
+    });
+  // Rainfall History
+  fetch(`${apiBase}/conditions/summary/${lat},${lon}?format=json&from=${new Date(Date.now()-7*864e5).toISOString().slice(0,10)}&to=${new Date().toISOString().slice(0,10)}&client_id=${clientId}&client_secret=${clientSecret}`)
+    .then(r=>r.json()).then(j=>{
+      let days = j.response && j.response[0] && j.response[0].periods;
+      if (!days) return rainModalHtml = "<div>Rainfall data not available.</div>";
+      let max = Math.max(...days.map(d=>d.precip?.totalMM||0));
+      rainModalHtml =
+        `<div style="font-size:1.3rem;text-align:center;">Rainfall - Last 7 Days</div>
+         <div class="rain-chart">` +
+        days.map(d=>`<div class="rain-bar" style="height:${(d.precip?.totalMM||0)/max*100||2}%">
+          <div class="rain-bar-val">${(d.precip?.totalMM||0).toFixed(1)}mm</div>
+          <div class="rain-bar-label">${dayName(d.dateTimeISO)}</div>
+        </div>`).join('') + `</div>
+        <div class="rain-totals">
+          Past 7 days: <span>${days.reduce((a,b)=>a+(b.precip?.totalMM||0),0).toFixed(1)}mm</span>
+        </div>`;
+    });
+  // AI Advice
+  document.getElementById("advice").textContent = getAdvice();
+  // Extras
+  document.getElementById("extrasRow").innerHTML =
+    `<div class="extras-item" id="lightningInfo">Lightning: --</div>
+     <div class="extras-item" id="roadInfo">Road: --</div>
+     <div class="extras-item" id="alertInfo">Alert: --</div>`;
+  // Lightning
+  fetch(`${apiBase}/lightning/${lat},${lon}?format=json&filter=all&limit=10&client_id=${clientId}&client_secret=${clientSecret}`)
+    .then(r=>r.json()).then(j=>{
+      let l = j.response ? j.response.length : 0;
+      document.getElementById("lightningInfo").textContent = "Lightning: " + (l ? l+" strikes" : "None");
+    });
+  // Road
+  fetch(`${apiBase}/roadweather/${lat},${lon}?client_id=${clientId}&client_secret=${clientSecret}`)
+    .then(r=>r.json()).then(j=>{
+      let c = j.response && j.response[0] && j.response[0].periods && j.response[0].periods[0] && j.response[0].periods[0].summary;
+      document.getElementById("roadInfo").textContent = "Road: " + (c||"N/A");
+    });
+  // Alerts
+  fetch(`${apiBase}/alerts/${lat},${lon}?format=json&limit=1&client_id=${clientId}&client_secret=${clientSecret}`)
+    .then(r=>r.json()).then(j=>{
+      let a = j.response && j.response[0] && j.response[0].details && j.response[0].details.headline;
+      document.getElementById("alertInfo").textContent = "Alert: " + (a||"None");
+    });
+}
+function setMainCardUnavailable() {
+  document.getElementById("mainTemp").textContent = "--";
+  document.getElementById("mainSummary").textContent = "Weather unavailable";
+  document.getElementById("mainDetails").innerHTML = "";
+}
+function getAdvice() {
+  // Returns a daily rotating weather advice
+  const advs = [
+    "Stay hydrated and enjoy the day!",
+    "Check for local weather alerts before heading out.",
+    "Keep an umbrella handy—just in case.",
+    "Layer up if heading out early.",
+    "Remember sun protection, even on cloudy days.",
+    "Ideal weather for a short walk or cuppa.",
+    "Check rainfall tab for recent history and trends."
+  ];
+  let i = (new Date()).getDate() % advs.length;
+  return advs[i];
+}
+// === Tabs logic ===
+document.getElementById("tabForecast").onclick = function() {
+  this.classList.add("active");
+  document.getElementById("tabRain").classList.remove("active");
+  document.getElementById("tabContent").style.display = "";
+  // just triggers forecast reload (already loaded)
+  loadWeather(userLat, userLon);
+};
+document.getElementById("tabRain").onclick = function() {
+  this.classList.add("active");
+  document.getElementById("tabForecast").classList.remove("active");
+  // Show rainfall modal
+  showRainfallModal();
+  document.getElementById("tabContent").style.display = "none";
+};
+// === START ===
+getLocationAndLoad();
+</script>
 </body>
 </html>
