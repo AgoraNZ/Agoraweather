@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>AgoraWeather NZ</title>
+  <title>AgoraWeather NZ Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
-    html, body { background: #181e2a; color: #fff; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    html, body { background: #181e2a; color: #fff; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif;}
     #main { max-width: 500px; margin: 0 auto; padding: 0 2px 32px 2px; }
-    .block { background: #222c40; border-radius: 13px; padding: 13px 9px 15px 13px; margin: 18px 0 24px 0; box-shadow: 0 2px 14px #0007; }
+    .block { background: #222c40; border-radius: 13px; padding: 13px 9px 15px 13px; margin: 18px 0 24px 0; box-shadow: 0 2px 14px #0007;}
     #loc { font-size: 1.13rem; font-weight: 600; margin-bottom: 4px; letter-spacing: 0.01em; }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-    .temp { font-size: 2.7rem; font-weight: bold; letter-spacing: -0.03em; }
-    .icon { width: 58px; height: 58px; }
-    .details { font-size: 1.03rem; color: #c8daf7; margin: 10px 0 4px 0; display: flex; flex-wrap: wrap; gap: 12px 18px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 14px;}
+    .temp { font-size: 2.7rem; font-weight: bold; letter-spacing: -0.03em;}
+    .icon { width: 58px; height: 58px;}
+    .details { font-size: 1.03rem; color: #c8daf7; margin: 10px 0 4px 0; display: flex; flex-wrap: wrap; gap: 12px 18px;}
     .details span { min-width: 44%; }
-    .advice-list { margin: 10px 0 0 0; }
-    .advice-tip { background: #253e62; color: #ffd25a; border-radius: 7px; font-size: 1.07rem; margin-bottom: 8px; padding: 8px 13px; font-weight: 500; box-shadow: 0 1px 8px #0002; line-height: 1.32; text-align: left; }
+    .advice-list { margin: 10px 0 0 0;}
+    .advice-tip { background: #253e62; color: #ffd25a; border-radius: 7px; font-size: 1.07rem; margin-bottom: 8px; padding: 8px 13px; font-weight: 500; box-shadow: 0 1px 8px #0002; line-height: 1.32; text-align: left;}
     .tabs { display: flex; margin-bottom: 7px;}
     .tab-btn { flex: 1; padding: 9px 0; background: #181e2a; color: #ffe180; border: none; border-radius: 6px 6px 0 0; font-size: 1.08rem; font-weight:600; margin-right:2px; cursor: pointer;}
     .tab-btn.active { background: #ffe180; color: #222c40;}
@@ -26,22 +26,30 @@
     .forecast-card .info { flex: 1 1 0; font-size: 1rem; color: #dde5f3; line-height: 1.25; }
     #rain-block { display:none; }
     #rain-title { font-size: 1.07rem; font-weight: 600; color: #85e7ff; margin-bottom: 8px;}
-    #rainChart { width: 100%; min-height: 140px; max-width: 490px; margin-bottom:10px;}
+    #rainChart { width: 100%; min-height: 110px; max-width: 490px; margin-bottom:10px;}
     .rain-summary, .rain-extra { font-size: 0.96rem; color: #ffe180; margin-top: 7px;}
     .rain-extra { color: #aad7ff; }
-    /* Popup for day details */
+    .rain-table { width:100%; margin-top:10px; border-spacing:0;}
+    .rain-table th, .rain-table td { font-size:0.95rem; padding:2px 6px;}
+    .rain-table th { color:#85e7ff; text-align:left;}
+    .rain-table td { color:#dde5f3;}
+    .wettest { color:#8ae995; font-weight:600;}
+    .driest { color:#fddbdb; font-weight:600;}
+    /* Popup for day details + hourly */
     #popup-bg { position: fixed; z-index: 9999; top:0;left:0;right:0;bottom:0; background: rgba(10,18,36,0.95); display:none; align-items: center; justify-content: center;}
     #popup { background: #222c40; border-radius: 17px; padding: 22px 15px; color: #fff; max-width: 380px; width:95vw; box-shadow: 0 8px 36px #000c; position: relative;}
     #popup .close { position: absolute; top:7px; right: 15px; font-size: 2rem; color: #aad7ff; cursor:pointer; background:none; border:none;}
     #popup .pday { font-size:1.11rem;font-weight:bold;margin-bottom:4px;}
     #popup .pdesc { font-size:1.01rem; color:#ffe180;margin-bottom:7px;}
     #popup .advice-tip {margin:7px 0;}
-    .hourly-row { display:flex; overflow-x:auto; gap:6px; margin-top:14px; padding-bottom:3px;}
-    .hour-card { background:#181e2a; border-radius:7px; padding:8px 7px; min-width:74px; text-align:center;}
-    .htime { font-size:1.02rem; color:#ffe180; }
-    .hicon { width:27px; height:27px;}
-    .htemp { font-size:1.07rem; font-weight:600;}
-    .info-bullet { font-size:0.92rem; color:#dde5f3; }
+    .hourly-vert {margin-top:15px; max-height:400px; overflow-y:auto;}
+    .hour-block {background:#181e2a;border-radius:7px;padding:9px 7px;margin-bottom:7px;display:flex;align-items:center;gap:12px;}
+    .hinfo {flex:1 1 0;}
+    .htime {font-size:1.06rem;color:#ffe180;font-weight:600;}
+    .hicon { width:32px; height:32px;}
+    .htemp { font-size:1.08rem; font-weight:600;}
+    .hrow { font-size:0.98rem; color:#dde5f3; }
+    .hrow span { margin-right:7px;}
     @media (max-width:600px){
       #main {padding:0 1px;}
       .block {padding:10px 3px 12px 7px;}
@@ -72,6 +80,7 @@
       <canvas id="rainChart"></canvas>
       <div class="rain-summary" id="rain-summary"></div>
       <div class="rain-extra" id="rain-extra"></div>
+      <table class="rain-table" id="rain-table"></table>
     </div>
   </div>
 </div>
@@ -82,7 +91,6 @@ const weatherIcons = icon => icon ? `https://cdn.aerisapi.com/wxblox/icons/${ico
 const dayOfWeek = d => new Date(d).toLocaleDateString('en-NZ', {weekday:'short'});
 const cap = s => (s||'').charAt(0).toUpperCase()+(s||'').slice(1);
 
-// Advice function, more NZ-specific & rotated daily
 function aiAdvice(d){
   let out = [], a = [];
   if(!d.weather) return ["No advice available"];
@@ -102,11 +110,9 @@ function aiAdvice(d){
   if(r.includes("auckland") && d.precip>10) a.push("Auckland tip: Check for surface flooding on motorways during heavy rain.");
   if(r.includes("canterbury") && d.wind>30) a.push("Canterbury Nor’wester: Secure trampolines and light outdoor gear.");
   if(d.temp>28 && d.humidity>65) a.push("Heatwave? Remember pets need shade and water too.");
-  // Outdoor/fishing
   if(d.precip < 1 && d.uv >= 5 && d.wind < 20) a.push("Great weather for outdoor sport, beach or picnic.");
   if(d.precip < 1 && d.wind < 10) a.push("Calm and clear – perfect for morning fishing.");
   if(d.gust>35 && d.gust<60) a.push("Windy: sailing, windsurf, and kite sports will be fun – check forecasts before heading out.");
-  // General NZ tip (rotates)
   let tips = [
     "Weather can change quickly – check again before leaving home.",
     "Check Waka Kotahi for road updates in wild weather.",
@@ -123,7 +129,26 @@ function aiAdvice(d){
   return out;
 }
 
-// Show/hide tabs
+// Ask for geolocation once, fallback to :auto if denied
+async function getLocation() {
+  return new Promise(resolve => {
+    const saved = localStorage.getItem('agoraWeatherCoords');
+    if (saved) {
+      try {
+        let o = JSON.parse(saved);
+        if(o && o.lat && o.lon) return resolve(o);
+      } catch(e){}
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        let o = {lat:pos.coords.latitude, lon:pos.coords.longitude};
+        localStorage.setItem('agoraWeatherCoords',JSON.stringify(o));
+        resolve(o);
+      },()=>{resolve(null);},{timeout:7000});
+    } else { resolve(null); }
+  });
+}
+
 function showTab(tab){
   document.getElementById('forecast-cards').style.display = tab=="forecast"?"flex":"none";
   document.getElementById('rain-block').style.display = tab=="rain"?"block":"none";
@@ -131,11 +156,15 @@ function showTab(tab){
   document.getElementById('rainTab').classList.toggle('active', tab=="rain");
 }
 
-// Popup for daily details + hourly
-function openPopup(day, forecastPeriods){
-  let p = forecastPeriods.find(x=>dayOfWeek(x.dateTimeISO)==day);
-  if(!p) return;
-  let hPeriods = forecastPeriods.filter(x=>new Date(x.dateTimeISO).getDay()==new Date(p.dateTimeISO).getDay());
+// Vertical hourly
+function openPopup(day, allPeriods){
+  let dayNum = null;
+  for (let p of allPeriods) { 
+    let d = new Date(p.dateTimeISO); 
+    if(dayOfWeek(p.dateTimeISO) === day) { dayNum = d.getDay(); break;}
+  }
+  let hPeriods = allPeriods.filter(p2=>new Date(p2.dateTimeISO).getDay()===dayNum);
+  let p = hPeriods[0] || {};
   let advice = aiAdvice({
     ...p, month: (new Date(p.dateTimeISO)).getMonth()+1, feelslike: p.feelslikeC||p.tempC, region:p.region||"", weather:p.weather
   });
@@ -143,14 +172,20 @@ function openPopup(day, forecastPeriods){
     <div class="pday">${dayOfWeek(p.dateTimeISO)}</div>
     <div class="pdesc">${cap(p.summary||p.weather||"")}</div>
     ${advice.map(t=>`<div class="advice-tip">${t}</div>`).join('')}
-    <div class="hourly-row">` +
-      hPeriods.slice(0,12).map(h=>
-        `<div class="hour-card">
-          <div class="htime">${new Date(h.dateTimeISO).getHours()}:00</div>
+    <div class="hourly-vert">` +
+      hPeriods.map(h=>
+        `<div class="hour-block">
+          <div class="htime">${("0"+new Date(h.dateTimeISO).getHours()).slice(-2)}:00</div>
           <img class="hicon" src="${weatherIcons(h.icon)}" alt=""/>
-          <div class="htemp">${Math.round(h.tempC||h.maxTempC||0)}°C</div>
-          <div class="info-bullet">${cap(h.weather||'')}</div>
-          <div class="info-bullet">${Math.round(h.windSpeedKPH||0)}km/h</div>
+          <div class="hinfo">
+            <div class="htemp">${Math.round(h.tempC||h.maxTempC||0)}°C</div>
+            <div class="hrow">
+              <span>${cap(h.weather||'')}</span>
+              <span>Wind ${h.windDir||''} ${Math.round(h.windSpeedKPH||0)}km/h</span>
+              <span>Gusts ${Math.round(h.windGustKPH||0)}km/h</span>
+              <span>Rain ${h.precipMM||0}mm</span>
+            </div>
+          </div>
         </div>`
       ).join('') +
     `</div>`;
@@ -161,11 +196,17 @@ function closePopup(){document.getElementById('popup-bg').style.display="none";}
 
 // --- Main
 (async function(){
-  // Fetch current, forecast, and rain
-  let cur = await fetch('https://data.api.xweather.com/conditions/:auto?format=json&plimit=1&filter=minutelyprecip,1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  // Location first
+  let coords = await getLocation();
+  let locQuery = coords ? `&location=${coords.lat},${coords.lon}` : '';
+  // Fetch current
+  let curUrl = coords
+    ? `https://data.api.xweather.com/conditions/${coords.lat},${coords.lon}?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
+    : `https://data.api.xweather.com/conditions/:auto?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
+
+  let cur = await fetch(curUrl).then(r=>r.json());
   let p = cur.success ? cur.response[0].periods[0] : {};
   let region = cur.success && cur.response[0].loc ? (cur.response[0].loc.city||cur.response[0].loc.region||"Your Area") : "Your Area";
-  // Current
   document.getElementById('loc').textContent = region;
   document.getElementById('temp').textContent = p.tempC!=null?Math.round(p.tempC)+'°C':'--°C';
   document.getElementById('icon').src = weatherIcons(p.icon);
@@ -182,13 +223,16 @@ function closePopup(){document.getElementById('popup-bg').style.display="none";}
     <span>UV: ${p.uvIndex!=null?p.uvIndex:'--'}</span>
     <span>Sunrise: ${p.sunriseISO?new Date(p.sunriseISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--'}</span>
     <span>Sunset: ${p.sunsetISO?new Date(p.sunsetISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'--'}</span>`;
-  // Advice (rotated daily)
   let dObj = {...p, month:(new Date(p.dateTimeISO||Date.now())).getMonth()+1, feelslike:p.feelslikeC||p.tempC, region:region};
   let advices = aiAdvice(dObj);
   document.getElementById('advice-list').innerHTML = advices.map(t=>`<div class="advice-tip">${t}</div>`).join('');
 
-  // Fetch forecast & render cards
-  let fc = await fetch('https://data.api.xweather.com/forecasts/:auto?format=json&plimit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  // Forecast
+  let fcUrl = coords
+    ? `https://data.api.xweather.com/forecasts/${coords.lat},${coords.lon}?format=json&plimit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
+    : `https://data.api.xweather.com/forecasts/:auto?format=json&plimit=48&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
+
+  let fc = await fetch(fcUrl).then(r=>r.json());
   let periods = fc.success ? fc.response[0].periods : [];
   let forecastDays = periods.filter((p,i,a)=>i===0||new Date(p.dateTimeISO).getDay()!==new Date(a[i-1].dateTimeISO).getDay());
   let fcDom = document.getElementById('forecast-cards'); fcDom.innerHTML = "";
@@ -207,7 +251,8 @@ function closePopup(){document.getElementById('popup-bg').style.display="none";}
   });
 
   // Rain history
-  let lat = cur.success && cur.response[0].loc ? cur.response[0].loc.lat : null, lon = cur.success && cur.response[0].loc ? cur.response[0].loc.long : null;
+  let lat = coords ? coords.lat : (cur.success && cur.response[0].loc ? cur.response[0].loc.lat : null), 
+      lon = coords ? coords.lon : (cur.success && cur.response[0].loc ? cur.response[0].loc.long : null);
   let week = [], month = [], ytd = 0;
   let rainErr = false;
   if(lat && lon) {
@@ -221,11 +266,23 @@ function closePopup(){document.getElementById('popup-bg').style.display="none";}
       if(rain365.daily && rain365.daily.precipitation_sum) {
         ytd = rain365.daily.precipitation_sum.reduce((a,b)=>a+b,0);
       }
+      // Show rain in table format for clarity
+      let table = `<tr><th>Date</th><th>Rain (mm)</th></tr>`;
+      let days = rain30.daily && rain30.daily.time ? rain30.daily.time : [];
+      for(let i=Math.max(0,days.length-14);i<days.length;++i){
+        table += `<tr>
+          <td>${days[i].substr(5)}</td>
+          <td class="${month[i]===Math.max(...month)?'wettest':month[i]===Math.min(...month)?'driest':''}">${month[i].toFixed(1)}</td>
+        </tr>`;
+      }
+      document.getElementById('rain-table').innerHTML = table;
     } catch(e){ rainErr=true; }
   } else { rainErr=true; }
-  // Chart
+  // Chart and summary
   if(rainErr||!week.length||!month.length){
     document.getElementById('rain-summary').textContent = "Rain data unavailable for this area.";
+    document.getElementById('rain-extra').textContent = "";
+    document.getElementById('rain-table').innerHTML = "";
   } else {
     document.getElementById('rain-summary').innerHTML = `Week: <b>${week.reduce((a,b)=>a+b,0).toFixed(1)} mm</b> | Month: <b>${month.reduce((a,b)=>a+b,0).toFixed(1)} mm</b> | Year-to-date: <b>${ytd.toFixed(1)} mm</b>`;
     let labels = Array.from({length:7},(_,i)=>`Day ${i+1}`);
@@ -234,10 +291,11 @@ function closePopup(){document.getElementById('popup-bg').style.display="none";}
       data:{labels,datasets:[{label:"Rain (mm)",data:week,backgroundColor:'#85e7ff'}]},
       options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
     });
-    // Extra stats (max/min/wettest)
+    // Extra stats
     let wet = Math.max(...month), dry = Math.min(...month), dayWet = month.indexOf(wet)+1, dayDry = month.indexOf(dry)+1;
-    document.getElementById('rain-extra').innerHTML = `Wettest day this month: <b>Day ${dayWet} (${wet.toFixed(1)} mm)</b> &nbsp; | &nbsp; Driest: <b>Day ${dayDry} (${dry.toFixed(1)} mm)</b>`;
+    document.getElementById('rain-extra').innerHTML = `Wettest day: <b>Day ${dayWet} (${wet.toFixed(1)} mm)</b> | Driest: <b>Day ${dayDry} (${dry.toFixed(1)} mm)</b>`;
   }
+  showTab('forecast');
 })();
 </script>
 </body>
