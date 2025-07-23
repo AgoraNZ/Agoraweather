@@ -107,8 +107,6 @@ const iconUrl = icon => icon ? `https://cdn.aerisapi.com/wxblox/icons/${icon}` :
 const cap = s => (s||'').charAt(0).toUpperCase()+(s||'').slice(1);
 const dayOfWeek = d => new Date(d).toLocaleDateString('en-NZ', {weekday:'short'});
 const timeHHMM = d => new Date(d).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'});
-const monthName = m => ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1];
-
 let forecastData = [], hourlyData = {}, locInfo = {};
 
 function switchTab(tab){
@@ -121,23 +119,21 @@ function switchTab(tab){
 }
 
 function aiAdvice(d, locName){
-  // Different advice depending on region/season/weather, no repeats
   let now = new Date(), month = now.getMonth()+1;
   let a = [];
-  if(d.temp>=28) a.push("NZ: Heatwave risk. Keep hydrated and check on elderly neighbours.");
-  if(d.uv>=7) a.push("High UV. Use sunscreen, hat and sunglasses outdoors.");
-  if(d.precip>=20) a.push("Heavy rain. Avoid flood-prone roads in " + locName.split(',')[0]);
-  if(d.wind>50) a.push("Gale warning: tie down loose items outside.");
+  if(d.temp>=28) a.push("NZ: Heatwave risk. Hydrate & check on elderly.");
+  if(d.uv>=7) a.push("High UV. Slip, slop, slap and wrap outdoors.");
+  if(d.precip>=20) a.push("Heavy rain. Avoid flood-prone roads in "+locName.split(',')[0]);
+  if(d.wind>50) a.push("Gale warning: Secure loose items.");
   if(['Otago','Southland'].some(r=>locName.includes(r)) && d.temp<3) a.push("Frost expected in "+locName.split(',')[0]+". Watch for icy roads.");
-  if(['Auckland','Northland'].some(r=>locName.includes(r)) && d.humidity>85) a.push("High humidity in "+locName.split(',')[0]+". Mould can grow fast – air out rooms.");
-  if([6,7,8].includes(month)) a.push("Winter: Layer up, heating on, and be cautious of black ice.");
-  if([12,1,2].includes(month)) a.push("Summer: Wear light clothing and drink extra water.");
-  if(a.length<2 && d.sunrise && d.sunset) a.push("Sun’s up early this week – take advantage for morning walks.");
-  if(a.length<2) a.push("NZ: Weather can change rapidly. Check the app again before heading out.");
+  if(['Auckland','Northland'].some(r=>locName.includes(r)) && d.humidity>85) a.push("High humidity in "+locName.split(',')[0]+". Air out damp rooms.");
+  if([6,7,8].includes(month)) a.push("Winter: Layer up and beware black ice.");
+  if([12,1,2].includes(month)) a.push("Summer: Stay cool & drink extra water.");
+  if(a.length<2 && d.sunrise && d.sunset) a.push("Sunrise early – great for morning walks.");
+  if(a.length<2) a.push("NZ: Weather can change rapidly. Check again before heading out.");
   return a.slice(0,2);
 }
 
-// Get current position, remember in session
 function getNZLocation(cb){
   if(sessionStorage.getItem('agoraLocLat')){
     cb(Number(sessionStorage.getItem('agoraLocLat')), Number(sessionStorage.getItem('agoraLocLon')));
@@ -155,9 +151,7 @@ function getNZLocation(cb){
     cb(null, null);
   }
 }
-
 function getCloudPct(cloudsCoded){
-  // XWeather: CL, SC, BK, OV etc. Best guess
   if(!cloudsCoded) return "--";
   if(/CL/i.test(cloudsCoded)) return "10%";
   if(/SC/i.test(cloudsCoded)) return "35%";
@@ -166,11 +160,10 @@ function getCloudPct(cloudsCoded){
   return "--";
 }
 
-// MAIN APP
 getNZLocation(async (lat, lon)=>{
-  // Use xweather :auto fallback if no location
+  // Conditions
   let urlCur = lat && lon
-    ? `https://data.api.xweather.com/conditions/:auto?format=json&plimit=1&filter=minutelyprecip,1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
+    ? `https://data.api.xweather.com/conditions/${lat},${lon}?format=json&plimit=1&filter=minutelyprecip,1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
     : `https://data.api.xweather.com/conditions/:auto?format=json&plimit=1&filter=minutelyprecip,1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.precipMM,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
 
   let cur = await fetch(urlCur).then(r=>r.json()).catch(()=>null);
@@ -204,8 +197,8 @@ getNZLocation(async (lat, lon)=>{
 
   // --- Forecast data ---
   let urlFc = lat && lon
-    ? `https://data.api.xweather.com/forecasts/:auto?format=json&plimit=8&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
-    : `https://data.api.xweather.com/forecasts/:auto?format=json&plimit=8&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
+    ? `https://data.api.xweather.com/forecasts/${lat},${lon}?format=json&plimit=8&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`
+    : `https://data.api.xweather.com/forecasts/:auto?format=json&plimit=8&fields=periods.dateTimeISO,periods.tempC,periods.weather,periods.icon,periods.maxTempC,periods.minTempC,periods.humidity,periods.precipMM,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.dewpointC,periods.summary,periods.pressureMB,periods.uvIndex,periods.visibilityKM,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`;
 
   let fc = await fetch(urlFc).then(r=>r.json()).catch(()=>null);
   forecastData = (fc && fc.success && fc.response[0].periods) ? fc.response[0].periods : [];
@@ -273,13 +266,13 @@ async function showHourlyPopup(f, dayIdx, locName){
   let hr = await fetch(urlHr).then(r=>r.json()).catch(()=>null);
   let hours = hr && hr.success && hr.response[0].periods ? hr.response[0].periods : [];
 
-  // Popup layout
   document.getElementById('popup-title').textContent = title;
   document.getElementById('popup-summary').innerHTML = adviceArr.map(a=>'<div class="advice">'+a+'</div>').join('');
   let hourlyHtml = '';
   if(hours.length){
     hourlyHtml += `<div class="hourly-list">`;
-    hours.forEach(h=>{
+    for(let i=0;i<hours.length;i+=2){ // Every 2 hours
+      let h = hours[i];
       hourlyHtml += `
       <div class="hour-row">
         <span class="htime">${timeHHMM(h.dateTimeISO)}</span>
@@ -293,7 +286,7 @@ async function showHourlyPopup(f, dayIdx, locName){
         <br>UV: ${h.uvIndex!=null?h.uvIndex:'--'} | Visibility: ${h.visibilityKM!=null?Math.round(h.visibilityKM)+'km':'--'}
         ${h.sunriseISO?('<br>Sunrise: '+timeHHMM(h.sunriseISO)):""}${h.sunsetISO?(' | Sunset: '+timeHHMM(h.sunsetISO)):""}
       </div>`;
-    });
+    }
     hourlyHtml += "</div>";
   } else {
     hourlyHtml = "<div style='color:#e37'>No hour-by-hour forecast found for this day.</div>";
@@ -305,7 +298,6 @@ async function showHourlyPopup(f, dayIdx, locName){
 function closePopup(){
   document.getElementById('popup-bg').style.display='none';
 }
-
 </script>
 </body>
 </html>
