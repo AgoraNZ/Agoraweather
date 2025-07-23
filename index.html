@@ -1,256 +1,290 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NZ Weather</title>
+  <meta charset="utf-8"/>
+  <title>AgoraWeather NZ – Blue Pro</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>
-    body {
-      margin: 0; padding: 0; background: #181818; color: #fff; font-family: Arial, sans-serif;
+    html,body{background:#181e2a;color:#fff;margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;}
+    #main{max-width:540px;margin:0 auto;padding:0 2px 48px 2px;}
+    .block{background:#222c40;border-radius:13px;padding:16px 12px 18px 16px;margin:18px 0 22px 0;box-shadow:0 2px 12px #0007;}
+    #loc{font-size:1.2rem;font-weight:700;margin-bottom:7px;letter-spacing:0.01em;color:#80bfff;}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .temp{font-size:2.7rem;font-weight:700;letter-spacing:-0.03em;}
+    .icon{width:64px;height:64px;}
+    .label-main{font-size:1.5rem;font-weight:600;line-height:1.13;color:#f8f7fa;margin-bottom:7px;}
+    .details{font-size:1.03rem;color:#c8daf7;margin:11px 0 3px 0;display:flex;flex-wrap:wrap;gap:13px 18px;}
+    .details span.label{color:#ffe180;font-weight:600;}
+    .metrics{font-size:1.03rem;color:#a0bacd;margin:2px 0 0 0;display:flex;flex-wrap:wrap;gap:9px 14px;}
+    .advice{background:#253e62;color:#ffd25a;border-radius:7px;font-size:1.11rem;margin-top:13px;padding:11px 16px;font-weight:500;box-shadow:0 1px 8px #0002;line-height:1.38;}
+    .alert-badges{display:flex;flex-wrap:wrap;gap:7px 10px;margin:8px 0 0 0;}
+    .alert-badge{background:#ffe180;color:#3d2b00;font-weight:700;border-radius:7px;padding:5px 10px;font-size:1.01rem;}
+    #hazards{font-size:1.03rem;color:#85e7ff;margin:7px 0 0 1px;}
+    #forecast-title{font-size:1.09rem;font-weight:700;margin:3px 0 10px 4px;color:#ffe180;}
+    #forecast{display:flex;flex-direction:column;gap:12px;}
+    .forecast-card{background:#232f47;border-radius:9px;padding:10px 8px 12px 14px;display:flex;align-items:center;gap:13px;box-shadow:0 1px 4px #0002;cursor:pointer;}
+    .forecast-card .day{font-weight:700;width:54px;color:#fff;}
+    .forecast-card .ficon{width:38px;height:38px;}
+    .forecast-card .info{flex:1 1 0;font-size:1.05rem;color:#dde5f3;line-height:1.24;}
+    .forecast-card .label-main{font-size:1.2rem;margin:0 0 2px 0;}
+    #rain-btn{margin:14px 0 0 0;display:inline-block;background:#1976d2;color:#fff;font-weight:600;padding:9px 23px;border-radius:8px;cursor:pointer;font-size:1.09rem;box-shadow:0 1px 6px #0002;border:none;}
+    .attribution{text-align:center;font-size:0.82rem;color:#668;}
+    /* Hourly modal */
+    #hourly-popup-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(16,24,40,0.97);align-items:center;justify-content:center;}
+    #hourly-popup-card{background:#232c42;border-radius:13px;max-width:95vw;width:410px;padding:0 0 19px 0;box-shadow:0 7px 33px #000b;position:relative;}
+    #hourly-popup-close{position:absolute;right:20px;top:9px;color:#ffe180;background:none;border:none;font-size:2.1rem;cursor:pointer;}
+    #hourly-popup-header{padding:17px 30px 7px 23px;font-size:1.2rem;font-weight:700;}
+    #hourly-popup-advice{font-size:1.09rem;color:#ffd25a;background:#253e62;border-radius:7px;margin:11px 22px 8px 22px;padding:9px 13px;}
+    #hourly-table{width:100%;border-collapse:collapse;font-size:1.03rem;margin:0 auto;}
+    #hourly-table th,#hourly-table td{padding:5px 8px;text-align:center;}
+    #hourly-table th{color:#ffe180;font-weight:600;border-bottom:1px solid #383e56;}
+    #hourly-table tr:nth-child(even){background:#253e62;}
+    /* Rain modal */
+    #rain-popup-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10001;background:rgba(16,24,40,0.97);align-items:center;justify-content:center;}
+    #rain-popup-card{background:#232c42;border-radius:13px;max-width:95vw;width:410px;padding:0 0 17px 0;box-shadow:0 7px 33px #000b;position:relative;}
+    #rain-popup-close{position:absolute;right:20px;top:9px;color:#85e7ff;background:none;border:none;font-size:2.1rem;cursor:pointer;}
+    #rain-popup-header{padding:15px 30px 7px 23px;font-size:1.13rem;font-weight:700;color:#85e7ff;}
+    .rain-bar-ct{display:flex;align-items:flex-end;justify-content:space-between;margin:15px 17px 8px 17px;height:99px;}
+    .rain-bar{background:#80bfff;border-radius:7px;width:23px;position:relative;}
+    .rain-bar-label{font-size:0.87rem;text-align:center;margin-top:3px;}
+    .rain-bar-val{position:absolute;top:-1.3em;left:0;width:100%;text-align:center;font-size:0.9rem;color:#ffe180;}
+    .rain-summary{font-size:1.01rem;color:#ffe180;margin:18px 0 0 19px;}
+    .rain-desc{color:#c8daf7;font-size:0.97rem;margin:13px 0 0 21px;}
+    /* Responsive tweaks */
+    @media(max-width:600px){
+      #main{padding:0 1px;}
+      .block{padding:11px 3px 13px 7px;}
+      .forecast-card .day{width:38px;}
+      #hourly-popup-card,#rain-popup-card{max-width:99vw;}
     }
-    .main-container { max-width: 450px; margin: auto; padding: 1rem; }
-    .main-card {
-      background: #232323; border-radius: 20px; box-shadow: 0 2px 24px #0008;
-      margin-top: 1.2rem; padding: 2rem 1rem 1rem 1rem; text-align: center;
-    }
-    .city { font-size: 1.35rem; font-weight: bold; letter-spacing: 1px; margin-bottom: 0.5rem; }
-    .weather-icon { width: 90px; height: 90px; display: block; margin: 0 auto; }
-    .temp { font-size: 3.5rem; font-weight: bold; color: #ffd700; }
-    .summary { font-size: 1.3rem; font-weight: 400; margin: 0.5rem 0; color: #fff;}
-    .row { display: flex; justify-content: space-between; margin: 0.3rem 0; font-size: 1rem;}
-    .card {
-      background: #222; border-radius: 16px; margin: 1rem 0 0 0; padding: 1.1rem;
-      box-shadow: 0 1px 6px #0006;
-    }
-    .advice { font-size: 1.1rem; font-style: italic; color: #ddd; margin-bottom: 0.3rem; }
-    .tab-btns { display: flex; gap: 1rem; justify-content: center; margin: 1.2rem 0 0.2rem 0;}
-    .tab-btn { background: #333; color: #fff; padding: 0.6rem 1.6rem; border-radius: 20px; border: none; font-size: 1rem; cursor: pointer; transition: background 0.2s;}
-    .tab-btn.active, .tab-btn:hover { background: #ffd700; color: #232323; }
-    .forecast-row { display: flex; gap: 1.2rem; overflow-x: auto; padding-bottom: 0.2rem;}
-    .forecast-card {
-      flex: 0 0 80px; background: #232323; border-radius: 16px;
-      text-align: center; margin-bottom: 0.6rem; cursor: pointer; padding: 0.7rem 0.2rem;
-      transition: box-shadow 0.15s;
-    }
-    .forecast-card:hover { box-shadow: 0 2px 12px #000a;}
-    .fc-day { font-weight: 700; }
-    .fc-temp { font-weight: 500; margin: 0.2rem 0; font-size: 1.2rem;}
-    .fc-summary { font-size: 0.9rem; color: #ccc;}
-    .extras { margin-top: 1.5rem; }
-    .extras-row { display: flex; gap: 1.3rem; justify-content: center; font-size: 0.97rem;}
-    .extras-item { background: #232323; border-radius: 10px; padding: 0.7rem 1rem; }
-    .rainfall-btn { margin: 1.5rem auto 0 auto; display: block; background: #232323; color: #fff; font-size: 1.1rem; border-radius: 18px; border: none; padding: 0.7rem 1.7rem; box-shadow: 0 1px 7px #0003; cursor: pointer; }
-    .rainfall-btn:hover { background: #ffd700; color: #232323; }
-    .bottom { text-align: center; color: #888; font-size: 0.8rem; margin: 1.5rem 0 0 0; }
-    /* Modal full-screen overlay */
-    .modal-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; background: #181818ee; display: flex; justify-content: center; align-items: center;}
-    .modal-content { background: #222; border-radius: 16px; padding: 2rem 1.2rem 1.2rem 1.2rem; max-width: 96vw; width: 390px; box-shadow: 0 2px 20px #0009; position: relative; }
-    .modal-close { position: absolute; top: 13px; right: 17px; font-size: 2rem; color: #fff; cursor: pointer; }
-    .rain-chart { width: 100%; height: 120px; display: flex; gap: 7px; align-items: flex-end; margin-top: 1.2rem;}
-    .rain-bar { background: #40a5fa; width: 24px; border-radius: 8px 8px 0 0; position: relative;}
-    .rain-bar-label { position: absolute; bottom: -22px; width: 100%; text-align: center; font-size: 0.85rem; color: #fff; }
-    .rain-bar-val { position: absolute; top: -26px; width: 100%; text-align: center; font-size: 0.9rem; color: #ffd700;}
-    .rain-totals { margin-top: 1.2rem; font-size: 1.1rem; color: #fff;}
-    .rain-totals span { color: #ffd700; }
-    @media (max-width: 510px) { .main-container { padding: 0.2rem; } .main-card, .card, .modal-content { padding: 1rem 0.3rem; } }
   </style>
 </head>
 <body>
-<div class="main-container">
-  <div class="main-card" id="mainCard">
-    <div class="city" id="cityName">Loading...</div>
-    <img id="mainIcon" class="weather-icon" style="display:none;">
-    <div class="temp" id="mainTemp"></div>
-    <div class="summary" id="mainSummary"></div>
-    <div id="mainDetails"></div>
+<div id="main">
+  <div class="block" id="current">
+    <div id="loc">Loading location…</div>
+    <div class="row">
+      <span class="temp" id="temp">--°C</span>
+      <img id="icon" class="icon" src="" alt="" />
+    </div>
+    <div class="label-main" id="mainLabel"></div>
+    <div class="details" id="details"></div>
+    <div class="metrics" id="metrics"></div>
+    <div class="advice" id="advice">Getting advice…</div>
+    <div class="alert-badges" id="alerts-badges"></div>
+    <div id="hazards"></div>
   </div>
-  <div class="advice" id="advice"></div>
-  <div class="tab-btns">
-    <button class="tab-btn active" id="tabForecast">Forecast</button>
-    <button class="tab-btn" id="tabRain">Rainfall</button>
+  <div class="block">
+    <div id="forecast-title">Next 7 days</div>
+    <div id="forecast"></div>
+    <button id="rain-btn">View Rainfall History</button>
   </div>
-  <div class="card" id="tabContent"></div>
-  <div class="extras">
-    <div class="extras-row" id="extrasRow"></div>
-    <button class="rainfall-btn" onclick="showRainfallModal()">☔ Rainfall History</button>
-  </div>
-  <div class="bottom">Data by Vaisala Xweather</div>
+  <div class="attribution">Powered by Vaisala Xweather – NZ Pro • <span style="color:#80bfff">Agora</span></div>
 </div>
-<div id="modalBG" class="modal-bg" style="display:none;">
-  <div class="modal-content" id="modalContent"></div>
-  <div class="modal-close" onclick="closeModal()">&times;</div>
-</div>
+<!-- Hourly Forecast Popup -->
+<div id="hourly-popup-bg"><div id="hourly-popup-card">
+  <button id="hourly-popup-close" onclick="closeHourlyPopup()">&times;</button>
+  <div id="hourly-popup-header"></div>
+  <div id="hourly-popup-advice"></div>
+  <table id="hourly-table"></table>
+</div></div>
+<!-- Rainfall History Popup -->
+<div id="rain-popup-bg"><div id="rain-popup-card">
+  <button id="rain-popup-close" onclick="closeRainPopup()">&times;</button>
+  <div id="rain-popup-header">Rainfall History</div>
+  <div class="rain-bar-ct" id="rain-bars"></div>
+  <div class="rain-summary" id="rain-summary"></div>
+  <div class="rain-desc" id="rain-desc"></div>
+</div></div>
 <script>
-const clientId = "U8feQfLlcEfcXDfsWZs4C";
-const clientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-const apiBase = "https://data.api.xweather.com";
-
-// === Helper functions ===
-function iconUrl(icon) {
-  return `https://cdn.aerisapi.com/wxblox/icons/${icon || "na.png"}`;
+// ---- Helper functions ----
+const wxicon = i => i ? `https://cdn.aerisapi.com/wxblox/icons/${i}` : '';
+const cap = s => (s||'').charAt(0).toUpperCase()+(s||'').slice(1);
+const dayName = d => new Date(d).toLocaleDateString('en-NZ',{weekday:'short'});
+const cityString = (loc) => {
+  if(!loc)return'';
+  if(loc.city) return loc.city;
+  if(loc.county) return loc.county;
+  if(loc.region) return loc.region;
+  if(loc.country) return loc.country;
+  return '';
+};
+let lastAdviceIdx = -1;
+// ---- AI Advice Pool ----
+function aiAdvice(ctx){
+  const pool = [
+    ctx.alerts?.length ? "⚠️ Weather alerts in effect – tap above for details." : null,
+    ctx.hazards?.includes('lightning') ? "⚡ Lightning nearby – stay indoors if possible." : null,
+    ctx.hazards?.includes('cyclone') ? "🌀 Cyclone risk near your area – monitor updates." : null,
+    ctx.road?.status === "RED" ? "🚗 Roads hazardous: Avoid travel if possible." : null,
+    ctx.rain7 >= 30 ? "Flooding possible – avoid low-lying areas." : null,
+    ctx.rainToday > 20 ? "Heavy rain today – watch for surface flooding." : null,
+    ctx.current.feelslikeC!=null && ctx.current.tempC!=null && (ctx.current.feelslikeC-ctx.current.tempC<=-3) ? "Feels much colder than air temp – dress for the windchill." : null,
+    ctx.current.uvIndex>=7 ? "☀️ High UV – use sunscreen and wear a hat." : null,
+    ctx.current.tempC>=28 ? "Extreme heat – drink plenty of water." : null,
+    ctx.current.tempC<=0 ? "Freezing – black ice risk early mornings." : null,
+    ctx.current.windGustKPH>=65 ? "🌬️ Damaging wind gusts – secure trampolines and bins." : null,
+    ctx.forecast[0]?.precipMM>=10 && ctx.forecast[0]?.maxTempC<=12 ? "Cold, wet day – best for indoor plans." : null,
+    ctx.season=="summer" ? "Classic NZ summer: Hydrate, slip-slop-slap, and enjoy the sun!" : null,
+    ctx.season=="spring" ? "Sudden chills possible – keep a jacket handy." : null,
+    ctx.season=="autumn" ? "Falling leaves can make roads slippery." : null,
+    ctx.season=="winter" ? "Frost risk mornings. Take care on rural roads." : null,
+    "Weather can change quickly in NZ – check before heading out.",
+  ].filter(Boolean);
+  let idx = Math.floor(Date.now()/8.64e7)%pool.length;
+  // Avoid repeat
+  if(idx===lastAdviceIdx) idx=(idx+3)%pool.length;
+  lastAdviceIdx=idx;
+  return pool[idx]||"Stay weather aware!";
 }
-function dayName(dateISO) {
-  let d = new Date(dateISO);
-  return d.toLocaleDateString('en-NZ', {weekday:'short'});
-}
-function pad(n) { return n < 10 ? '0'+n : n; }
-function showRainfallModal() {
-  document.getElementById('modalBG').style.display = '';
-  document.getElementById('modalContent').innerHTML = rainModalHtml;
-}
-function closeModal() { document.getElementById('modalBG').style.display='none'; }
-// ===============
-
-// =========== Data Fetch Logic ===========
-let userLat, userLon, cityName = "Loading...", rainModalHtml = "";
-
-function setCity(c) {
-  cityName = c;
-  document.getElementById("cityName").textContent = cityName;
-}
-function getLocationAndLoad() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
-      userLat = pos.coords.latitude;
-      userLon = pos.coords.longitude;
-      fetchCityName(userLat, userLon);
-      loadWeather(userLat, userLon);
-    }, () => {
-      // Default to Auckland CBD
-      userLat = -36.8485; userLon = 174.7633;
-      setCity("Auckland");
-      loadWeather(userLat, userLon);
-    });
-  } else {
-    userLat = -36.8485; userLon = 174.7633;
-    setCity("Auckland");
-    loadWeather(userLat, userLon);
+// ---- Data holders ----
+let CITY="Loading…",lat=null,lon=null,locObj={},forecast7=[],hourlyAll=[],alerts=[],hazards=[],rain7=0,rain30=0,rainYTD=0,rainDays=[],season="";
+// ---- Fetch all ----
+(async function(){
+  // 1. Geo (browser, fallback, never prompt twice)
+  let stored=localStorage.getItem("agora_latlon");
+  if(stored){[lat,lon]=stored.split(',').map(Number);}
+  if(!lat||!lon){
+    try{
+      await new Promise((resolve,reject)=>{
+        navigator.geolocation.getCurrentPosition(pos=>{
+          lat=pos.coords.latitude;lon=pos.coords.longitude;
+          localStorage.setItem("agora_latlon",lat+","+lon);resolve();
+        },reject,{timeout:7000});
+      });
+    }catch{lat=-37.8;lon=175.3;}
   }
-}
-function fetchCityName(lat, lon) {
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-    .then(res => res.json())
-    .then(j => {
-      let city = j.address.city || j.address.town || j.address.village || j.address.state_district || "New Zealand";
-      setCity(city);
-    })
-    .catch(() => setCity("New Zealand"));
-}
-function loadWeather(lat, lon) {
-  // Conditions
-  fetch(`${apiBase}/conditions/${lat},${lon}?format=json&client_id=${clientId}&client_secret=${clientSecret}`)
-    .then(r=>r.json()).then(j=>{
-      let ob = j.response && j.response[0] && j.response[0].periods[0];
-      if (!ob) return setMainCardUnavailable();
-      document.getElementById("mainIcon").src = iconUrl(ob.icon);
-      document.getElementById("mainIcon").style.display = '';
-      document.getElementById("mainTemp").textContent = Math.round(ob.tempC)+"°";
-      document.getElementById("mainSummary").textContent = ob.weatherPrimary || ob.weather || "";
-      document.getElementById("mainDetails").innerHTML =
-        `<div class="row"><span>Feels:</span><span>${Math.round(ob.feelslikeC)}°</span></div>
-         <div class="row"><span>Humidity:</span><span>${ob.humidity}%</span></div>
-         <div class="row"><span>Wind:</span><span>${ob.windSpeedKPH||0} km/h ${ob.windDir||""}</span></div>
-         <div class="row"><span>Pressure:</span><span>${ob.pressureMB||""} hPa</span></div>
-         <div class="row"><span>Sunrise:</span><span>${(ob.sunriseISO||"").slice(11,16)}</span></div>
-         <div class="row"><span>Sunset:</span><span>${(ob.sunsetISO||"").slice(11,16)}</span></div>`;
-    })
-    .catch(() => setMainCardUnavailable());
-  // Forecast
-  fetch(`${apiBase}/forecasts/${lat},${lon}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.maxTempC,periods.minTempC,periods.icon,periods.weatherPrimary&client_id=${clientId}&client_secret=${clientSecret}`)
-    .then(r=>r.json()).then(j=>{
-      let fc = j.response && j.response[0] && j.response[0].periods;
-      if (!fc) return document.getElementById("tabContent").innerHTML = "<div style='text-align:center;'>Forecast not available.</div>";
-      document.getElementById("tabContent").innerHTML =
-        `<div class="forecast-row">` +
-        fc.map(day =>
-          `<div class="forecast-card">
-             <div class="fc-day">${dayName(day.dateTimeISO)}</div>
-             <img src="${iconUrl(day.icon)}" width="44" style="margin:0.2rem 0">
-             <div class="fc-temp">${Math.round(day.maxTempC)}°/${Math.round(day.minTempC)}°</div>
-             <div class="fc-summary">${day.weatherPrimary||""}</div>
-           </div>`
-        ).join('') +
-        `</div>`;
-    });
-  // Rainfall History
-  fetch(`${apiBase}/conditions/summary/${lat},${lon}?format=json&from=${new Date(Date.now()-7*864e5).toISOString().slice(0,10)}&to=${new Date().toISOString().slice(0,10)}&client_id=${clientId}&client_secret=${clientSecret}`)
-    .then(r=>r.json()).then(j=>{
-      let days = j.response && j.response[0] && j.response[0].periods;
-      if (!days) return rainModalHtml = "<div>Rainfall data not available.</div>";
-      let max = Math.max(...days.map(d=>d.precip?.totalMM||0));
-      rainModalHtml =
-        `<div style="font-size:1.3rem;text-align:center;">Rainfall - Last 7 Days</div>
-         <div class="rain-chart">` +
-        days.map(d=>`<div class="rain-bar" style="height:${(d.precip?.totalMM||0)/max*100||2}%">
-          <div class="rain-bar-val">${(d.precip?.totalMM||0).toFixed(1)}mm</div>
-          <div class="rain-bar-label">${dayName(d.dateTimeISO)}</div>
-        </div>`).join('') + `</div>
-        <div class="rain-totals">
-          Past 7 days: <span>${days.reduce((a,b)=>a+(b.precip?.totalMM||0),0).toFixed(1)}mm</span>
-        </div>`;
-    });
-  // AI Advice
-  document.getElementById("advice").textContent = getAdvice();
-  // Extras
-  document.getElementById("extrasRow").innerHTML =
-    `<div class="extras-item" id="lightningInfo">Lightning: --</div>
-     <div class="extras-item" id="roadInfo">Road: --</div>
-     <div class="extras-item" id="alertInfo">Alert: --</div>`;
-  // Lightning
-  fetch(`${apiBase}/lightning/${lat},${lon}?format=json&filter=all&limit=10&client_id=${clientId}&client_secret=${clientSecret}`)
-    .then(r=>r.json()).then(j=>{
-      let l = j.response ? j.response.length : 0;
-      document.getElementById("lightningInfo").textContent = "Lightning: " + (l ? l+" strikes" : "None");
-    });
+  // 2. Conditions
+  let cond=await fetch(`https://data.api.xweather.com/conditions/:auto?format=json&plimit=1&filter=minutelyprecip,5min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.icon,periods.feelslikeC,periods.uvIndex,periods.pressureMB,periods.visibilityKM,periods.cloudsCoded,periods.sunriseISO,periods.sunsetISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq`).then(r=>r.json());
+  let p=cond?.response?.[0]?.periods?.[0]||{};
+  locObj=cond?.response?.[0]?.loc||{};
+  CITY=cityString(locObj)||"Your Area";
+  // 3. 7-day forecast
+  let forecast=await fetch('https://data.api.xweather.com/forecasts/:auto?format=json&filter=day&limit=7&fields=periods.dateTimeISO,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.icon&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  forecast7=forecast?.response?.[0]?.periods||[];
+  // 4. Hourly (entire next 48h+)
+  let hourly=await fetch('https://data.api.xweather.com/forecasts/:auto?format=json&filter=hour&limit=48&fields=periods.dateTimeISO,periods.tempC,periods.feelslikeC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.precipMM,periods.weather,periods.icon,periods.uvIndex,periods.pressureMB,periods.visibilityKM,periods.cloudsCoded,periods.pop&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  hourlyAll=hourly?.response?.[0]?.periods||[];
+  // 5. Alerts
+  let alertR=await fetch('https://data.api.xweather.com/alerts/:auto?format=json&limit=5&fields=details.name,loc,details.color,details.body,details.bodyFull,timestamps.beginsISO,timestamps.expiresISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  alerts=alertR?.response||[];
+  // 6. Lightning
+  let lightningR=await fetch('https://data.api.xweather.com/lightning/:auto?format=json&filter=all&limit=5&fields=id,ob,loc,recISO&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  // 7. Cyclone
+  let cycR=await fetch('https://data.api.xweather.com/tropicalcyclones/closest?p=:auto&radius=25mi&minradius=0mi&filter=all,&limit=2&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  // 8. Road
+  let roadR=await fetch('https://data.api.xweather.com/roadweather/:auto?filter=&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq').then(r=>r.json());
+  // 9. Rain
+  let rain30R=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=30&daily=precipitation_sum&timezone=auto`).then(r=>r.json());
+  let rain365R=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&past_days=365&daily=precipitation_sum&timezone=auto`).then(r=>r.json());
+  rainDays=rain30R?.daily?.precipitation_sum?.slice(-7)||[];
+  rain7=rainDays.reduce((a,b)=>a+b,0);
+  rain30=rain30R?.daily?.precipitation_sum?.reduce((a,b)=>a+b,0)||0;
+  rainYTD=rain365R?.daily?.precipitation_sum?.reduce((a,b)=>a+b,0)||0;
+  // Hazards logic
+  hazards=[];
+  if(lightningR?.response?.length)hazards.push('lightning');
+  if(cycR?.response?.length)hazards.push('cyclone');
   // Road
-  fetch(`${apiBase}/roadweather/${lat},${lon}?client_id=${clientId}&client_secret=${clientSecret}`)
-    .then(r=>r.json()).then(j=>{
-      let c = j.response && j.response[0] && j.response[0].periods && j.response[0].periods[0] && j.response[0].periods[0].summary;
-      document.getElementById("roadInfo").textContent = "Road: " + (c||"N/A");
-    });
-  // Alerts
-  fetch(`${apiBase}/alerts/${lat},${lon}?format=json&limit=1&client_id=${clientId}&client_secret=${clientSecret}`)
-    .then(r=>r.json()).then(j=>{
-      let a = j.response && j.response[0] && j.response[0].details && j.response[0].details.headline;
-      document.getElementById("alertInfo").textContent = "Alert: " + (a||"None");
-    });
+  let roadStatus=roadR?.response?.[0]?.periods?.[0]?.condition||"";
+  // --- Determine NZ Season
+  let m=(new Date).getMonth()+1;
+  season=(m>=12||m<=2)?"summer":(m>=3&&m<=5)?"autumn":(m>=6&&m<=8)?"winter":"spring";
+  // --- BUILD UI ---
+  // 1. Current
+  document.getElementById('loc').textContent=CITY;
+  document.getElementById('temp').textContent=p.tempC!=null?Math.round(p.tempC)+"°C":"--";
+  document.getElementById('icon').src=wxicon(p.icon)||'';
+  document.getElementById('mainLabel').innerHTML=p.weather?`<span style="font-size:1.2em">${cap(p.weather)}</span>`:"";
+  let dhtm=`<span class="label">Feels:</span> ${p.feelslikeC!=null?Math.round(p.feelslikeC)+"°C":"--"}`;
+  dhtm+=`<span class="label">Humidity:</span> ${p.humidity!=null?p.humidity+"%":"--"}`;
+  dhtm+=`<span class="label">Dew:</span> ${p.dewpointC!=null?Math.round(p.dewpointC)+"°C":"--"}`;
+  dhtm+=`<span class="label">UV:</span> ${p.uvIndex!=null?p.uvIndex:"--"}`;
+  dhtm+=`<span class="label">Cloud:</span> ${p.cloudsCoded?parseInt((p.cloudsCoded||"00").slice(2))*10+"%":"--"}`;
+  dhtm+=`<span class="label">Sunrise:</span> ${p.sunriseISO?new Date(p.sunriseISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):"--"}`;
+  dhtm+=`<span class="label">Sunset:</span> ${p.sunsetISO?new Date(p.sunsetISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):"--"}`;
+  document.getElementById('details').innerHTML=dhtm;
+  let mhtm=`<span>Wind: ${p.windDir||"--"} ${p.windSpeedKPH!=null?Math.round(p.windSpeedKPH)+" km/h":"--"}</span>
+            <span>Gusts: ${p.windGustKPH!=null?Math.round(p.windGustKPH)+" km/h":"--"}</span>
+            <span>Pressure: ${p.pressureMB!=null?Math.round(p.pressureMB)+" hPa":"--"}</span>
+            <span>Visibility: ${p.visibilityKM!=null?Math.round(p.visibilityKM)+" km":"--"}</span>`;
+  document.getElementById('metrics').innerHTML=mhtm;
+  // 2. Advice (with all context)
+  document.getElementById('advice').textContent=aiAdvice({
+    current:p,season,forecast:forecast7,alerts,hazards,road:{status:roadStatus},rain7,rainToday:rainDays[6]||0
+  });
+  // 3. Alerts
+  let badges=alerts.map(al=>`<span class="alert-badge" style="background:${al.details?.color||'#ffe180'}">${al.details?.name||"Alert"}</span>`);
+  document.getElementById('alerts-badges').innerHTML=badges.join('');
+  // 4. Hazards
+  let hazarr=[];
+  if(lightningR?.response?.length)hazarr.push("⚡ Recent lightning nearby!");
+  if(cycR?.response?.length)hazarr.push("🌀 Cyclone activity within 25 mi");
+  if(roadStatus)hazarr.push("🚗 Road: "+cap(roadStatus));
+  document.getElementById('hazards').innerHTML=hazarr.join("&nbsp;•&nbsp;");
+  // 5. 7-day Forecast
+  let fcDom=document.getElementById('forecast');fcDom.innerHTML="";
+  forecast7.forEach((f,idx)=>{
+    let card=document.createElement('div');card.className='forecast-card';
+    card.onclick=()=>showHourlyPopup(idx);
+    card.innerHTML=`<div class="day">${dayName(f.dateTimeISO)}</div>
+      <img class="ficon" src="${wxicon(f.icon)}" alt=""/>
+      <div class="info">
+        <div class="label-main">${cap(f.weather)}</div>
+        <div>${Math.round(f.maxTempC)}/${Math.round(f.minTempC)}°C</div>
+        <div>Rain ${f.precipMM||0}mm • Hum ${f.maxHumidity||"--"}–${f.minHumidity||"--"}%</div>
+        <div>Wind ${f.windDirMin||""}-${f.windDirMax||""} ${Math.round(f.windSpeedMinKPH||0)}–${Math.round(f.windSpeedMaxKPH||0)}km/h</div>
+      </div>`;
+    fcDom.appendChild(card);
+  });
+  // 6. Rain modal
+  document.getElementById('rain-btn').onclick=()=>showRainPopup();
+})();
+// ---- Hourly modal ----
+function showHourlyPopup(dayIdx){
+  // Gather hours for that day
+  let f7=window.forecast7, hAll=window.hourlyAll;
+  if(!f7||!hAll){alert("Hourly not ready.");return;}
+  let day=new Date(f7[dayIdx].dateTimeISO).getDate();
+  let hours=hAll.filter(h=>new Date(h.dateTimeISO).getDate()===day);
+  let html=`<tr>
+    <th>Time</th><th>Cond.</th><th>Temp</th><th>Feels</th><th>Rain</th>
+    <th>Wind</th><th>Gusts</th><th>Hum</th><th>UV</th>
+  </tr>`;
+  hours.forEach(h=>{
+    html+=`<tr>
+      <td>${new Date(h.dateTimeISO).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td><img src="${wxicon(h.icon)}" style="width:23px;height:23px;vertical-align:middle"> ${cap(h.weather||'')}</td>
+      <td>${h.tempC!=null?Math.round(h.tempC)+'°C':'--'}</td>
+      <td>${h.feelslikeC!=null?Math.round(h.feelslikeC)+'°C':'--'}</td>
+      <td>${h.precipMM!=null?h.precipMM+'mm':'--'}</td>
+      <td>${h.windSpeedKPH!=null?Math.round(h.windSpeedKPH)+'km/h':'--'}</td>
+      <td>${h.windGustKPH!=null?Math.round(h.windGustKPH)+'km/h':'--'}</td>
+      <td>${h.humidity!=null?h.humidity+'%':'--'}</td>
+      <td>${h.uvIndex!=null?h.uvIndex:'--'}</td>
+    </tr>`;
+  });
+  document.getElementById('hourly-popup-header').innerHTML=`${dayName(window.forecast7[dayIdx].dateTimeISO)} – ${window.CITY}`;
+  document.getElementById('hourly-popup-advice').textContent="Tip: Scroll for full day's detail.";
+  document.getElementById('hourly-table').innerHTML=html;
+  document.getElementById('hourly-popup-bg').style.display='flex';
 }
-function setMainCardUnavailable() {
-  document.getElementById("mainTemp").textContent = "--";
-  document.getElementById("mainSummary").textContent = "Weather unavailable";
-  document.getElementById("mainDetails").innerHTML = "";
+function closeHourlyPopup(){document.getElementById('hourly-popup-bg').style.display='none';}
+// ---- Rain modal ----
+function showRainPopup(){
+  // Rain bars last 7 days
+  let barsHtml="",days=window.rainDays||[];
+  let max=Math.max(...days,1);
+  days.forEach((v,i)=>{
+    barsHtml+=`<div><div class="rain-bar" style="height:${(v/max)*96}px"><div class="rain-bar-val">${Math.round(v)}mm</div></div>
+    <div class="rain-bar-label">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][(new Date(Date.now()-((6-i)*864e5))).getDay()]}</div></div>`;
+  });
+  document.getElementById('rain-bars').innerHTML=barsHtml;
+  document.getElementById('rain-summary').innerHTML=`Past week: <b>${Math.round(window.rain7)} mm</b> &nbsp; | &nbsp; Past 30 days: <b>${Math.round(window.rain30)} mm</b> &nbsp; | &nbsp; Year-to-date: <b>${Math.round(window.rainYTD)} mm</b>`;
+  document.getElementById('rain-desc').innerHTML="NZ rainfall: YTD totals help monitor drought risk and farm planning.";
+  document.getElementById('rain-popup-bg').style.display='flex';
 }
-function getAdvice() {
-  // Returns a daily rotating weather advice
-  const advs = [
-    "Stay hydrated and enjoy the day!",
-    "Check for local weather alerts before heading out.",
-    "Keep an umbrella handy—just in case.",
-    "Layer up if heading out early.",
-    "Remember sun protection, even on cloudy days.",
-    "Ideal weather for a short walk or cuppa.",
-    "Check rainfall tab for recent history and trends."
-  ];
-  let i = (new Date()).getDate() % advs.length;
-  return advs[i];
-}
-// === Tabs logic ===
-document.getElementById("tabForecast").onclick = function() {
-  this.classList.add("active");
-  document.getElementById("tabRain").classList.remove("active");
-  document.getElementById("tabContent").style.display = "";
-  // just triggers forecast reload (already loaded)
-  loadWeather(userLat, userLon);
-};
-document.getElementById("tabRain").onclick = function() {
-  this.classList.add("active");
-  document.getElementById("tabForecast").classList.remove("active");
-  // Show rainfall modal
-  showRainfallModal();
-  document.getElementById("tabContent").style.display = "none";
-};
-// === START ===
-getLocationAndLoad();
+function closeRainPopup(){document.getElementById('rain-popup-bg').style.display='none';}
 </script>
 </body>
 </html>
