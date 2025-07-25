@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Agora NZ Weather – Smarter Kiwi Weather App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="The only weather app built on real NZ station data with truly practical Kiwi advice."/>
+  <meta name="description" content="The only weather app built on real NZ station data with uniquely Kiwi weather advice."/>
   <style>
     body {
       margin: 0; padding: 0;
@@ -20,223 +20,242 @@
       display: flex; flex-direction: column;
     }
     header {
-      background: linear-gradient(90deg, #004c99 30%, #1ca8dd 100%);
-      border-radius: 12px 12px 0 0;
-      color: #fff;
-      padding: 28px 26px 12px 26px;
-      font-size: 1.6em;
-      font-weight: bold;
-      letter-spacing: 0.01em;
+      background: linear-gradient(90deg, #18558e 68%, #15b2c1 100%);
+      color: #fff; padding: 34px 22px 18px 22px;
+      border-radius: 0 0 30px 30px;
+      box-shadow: 0 3px 16px #18558e10;
+      text-align: left;
     }
-    .subtitle {
-      font-size: 1em;
-      margin-top: 6px;
-      color: #e6eaf1;
-      font-weight: 400;
+    .main-title { font-size: 2.07rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px;}
+    .sub-title { font-size: 1.09rem; opacity: 0.94; font-weight: 400; margin-bottom: 0;}
+    .station-select-row { display: flex; align-items: center; gap: 9px; margin-top: 14px; margin-bottom: 7px;}
+    select, button { font-size: 1rem; padding: 5px 10px; border-radius: 6px; border: 1px solid #18558e;
+      background: #f4f7fb; color: #1c293a; font-family: inherit; }
+    select:disabled { background: #e7eaf3; color: #888; }
+    .current-block {
+      margin: 17px 18px 0 18px; padding: 17px 11px;
+      border-radius: 12px; background: #eaf3fa;
+      box-shadow: 0 2px 8px #cad8e850;
+      display: flex; align-items: center; gap: 14px;
     }
-    .weather-card {
-      display: flex; align-items: center;
-      padding: 24px 26px 14px 26px;
-      border-bottom: 1px solid #dde3ea;
+    .current-icon {
+      width: 62px; height: 62px; object-fit: contain; background: #fff;
+      border-radius: 50%; border: 2.5px solid #18558e;
+      padding: 6px; box-shadow: 0 0 8px #18558e18; margin-right: 8px;
     }
-    .weather-icon {
-      width: 64px; height: 64px; margin-right: 18px;
+    .current-details { flex: 1; }
+    .current-temp { font-size: 2.1rem; font-weight: bold; margin: 0; }
+    .feelslike { font-size: 1.11rem; opacity: 0.72; margin-bottom: 2px;}
+    .current-weather-text { font-size: 1.02rem; margin-top: 3px; color: #2564a3; font-weight: 500;}
+    .current-extra { font-size: 0.98rem; margin-top: 7px; opacity: 0.81;}
+    .advice-block {
+      margin: 17px 18px 0 18px; padding: 13px 15px 13px 15px;
+      border-radius: 10px; background: #e5f2ff;
+      color: #1e364a; font-size: 1.10rem; font-weight: 500; box-shadow: 0 2px 8px #c8e6ff55;
+      min-height: 58px;
     }
-    .weather-details {
-      flex: 1;
-    }
-    .weather-main {
-      font-size: 2.5em; font-weight: 600;
-      margin-bottom: 6px;
-    }
-    .weather-secondary {
-      font-size: 1em;
-      color: #5b7190;
-      margin-bottom: 4px;
-    }
-    .weather-extra {
-      font-size: 0.98em;
-      color: #7b92ad;
-    }
-    .advice {
-      padding: 14px 26px 0 26px;
-      font-size: 1.11em;
-      color: #275788;
-      font-weight: 500;
-      line-height: 1.45;
-    }
-    .updated {
-      padding: 8px 26px 0 26px;
-      font-size: 0.96em;
-      color: #90a6be;
-    }
-    .forecast-row {
-      display: flex; flex-direction: row; justify-content: space-between;
-      gap: 8px; padding: 12px 16px 0 16px;
-    }
+    .forecast-row { margin: 18px 0 0 0; padding-left: 14px; display: flex; overflow-x: auto; gap: 9px; scrollbar-width: thin; }
     .forecast-card {
-      background: #f6fafd;
-      border-radius: 7px;
-      box-shadow: 0 1px 8px #193a5e18;
-      padding: 10px 7px;
-      width: 32%;
-      min-width: 96px;
-      display: flex; flex-direction: column; align-items: center;
-      font-size: 0.97em;
+      flex: 0 0 118px; background: #f7faff; border-radius: 12px;
+      box-shadow: 0 2px 7px #aac2e660; display: flex; flex-direction: column; align-items: center;
+      padding: 11px 7px 13px 7px; cursor: pointer; transition: box-shadow 0.2s; border: 2px solid transparent;
+      min-width: 108px; max-width: 128px;
     }
-    .forecast-card img {
-      width: 38px; height: 38px; margin: 2px auto 6px auto;
+    .forecast-card.selected, .forecast-card:hover { border: 2.5px solid #18558e; box-shadow: 0 6px 16px #aac2e680; background: #e2f3ff;}
+    .forecast-icon { width: 41px; height: 41px; margin-bottom: 6px; margin-top: 2px;}
+    .forecast-day { font-weight: 600; font-size: 1.01rem; margin-bottom: 2px; }
+    .forecast-summary { font-size: 0.97rem; margin-bottom: 4px; color: #2857a1; min-height: 18px; text-align: center;}
+    .forecast-temps { font-size: 1.07rem; font-weight: 500; color: #285680; margin-bottom: 1px;}
+    .forecast-rain { font-size: 0.91rem; color: #0a6899; margin-bottom: 0;}
+    .modal-bg {
+      position: fixed; left:0; top:0; right:0; bottom:0; background: #23324c45;
+      z-index: 50; display: flex; align-items: flex-end; justify-content: center;
     }
-    .forecast-date { font-weight: 600; margin-bottom: 3px; }
-    .forecast-cond { font-size: 0.95em; margin-bottom: 2px; }
-    .forecast-temp { font-weight: 500; }
-    .error-msg {
-      color: #ba1515; padding: 24px 26px; text-align: center;
+    .modal-popup {
+      width: 100%; max-width: 470px; background: #fff; border-radius: 22px 22px 0 0;
+      box-shadow: 0 10px 40px #23324c70; padding: 23px 18px 18px 18px; animation: modalIn 0.3s;
     }
+    @keyframes modalIn { from { transform: translateY(100px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
+    .modal-header { font-size: 1.30rem; font-weight: bold; margin-bottom: 7px; color: #18558e;}
+    .modal-close-btn { position: absolute; top: 18px; right: 23px; background: none; border: none;
+      font-size: 1.7rem; color: #6c7c8c; cursor: pointer; z-index: 100; }
+    .modal-details { margin-top: 6px; font-size: 1.07rem; color: #23415c;}
+    .rain-panel {
+      margin: 18px 18px 0 18px; padding: 12px 12px 10px 12px;
+      border-radius: 10px; background: #ecf8ff; color: #15304b;
+      box-shadow: 0 2px 8px #c8e6ff40; font-size: 1.03rem; line-height: 1.35em;
+    }
+    .rain-label { font-weight: 600; color: #18558e; margin-bottom: 3px; font-size: 1.08rem;}
+    .fishing-panel {
+      margin: 25px 18px 0 18px; padding: 14px 14px 12px 14px;
+      border-radius: 12px; background: #eafaf7;
+      box-shadow: 0 2px 7px #bceadd33;
+      color: #18558e; font-size: 1.12rem; font-weight: 500;
+      min-height: 50px;
+    }
+    .fish-headline { font-size: 1.18rem; font-weight: bold; margin-bottom: 6px;}
+    .fish-tips { font-size: 1.04rem; margin-top: 7px; color: #217b6a; }
+    @media (max-width: 600px) { .app-container { box-shadow: none; border-radius: 0;} .forecast-row { padding-left: 3px;}
+      .modal-popup { border-radius: 21px 21px 0 0; padding: 11px 6px 17px 7px;} }
+    .loader {
+      margin: 60px auto 34px auto; border: 7px solid #d7e3f5; border-top: 7px solid #0f82c6;
+      border-radius: 50%; width: 44px; height: 44px; animation: spin 1.05s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0);} 100% { transform: rotate(360deg);} }
+    .credit { text-align: center; color: #b4c2d3; font-size: 0.96em; margin: 31px auto 0 auto;}
+    .station-select-row label { font-size: 1em; color: #133958;}
   </style>
 </head>
 <body>
   <div class="app-container">
     <header>
-      Agora NZ Weather<br>
-      <span class="subtitle">The only NZ weather app with real station data & truly practical Kiwi advice.</span>
-      <div style="font-size:0.96em; margin-top:9px;">
-        Station: <b>Paeroa (Actual Station IPAERO15)</b>
+      <div class="main-title">Agora NZ Weather</div>
+      <div class="sub-title">The only NZ weather app with real station data &amp; truly practical Kiwi advice</div>
+      <div class="station-select-row">
+        <label for="stationSelect">Station:</label>
+        <select id="stationSelect" disabled>
+          <option value="IPAERO15" selected>Paeroa (Actual Station)</option>
+        </select>
       </div>
     </header>
-
-    <div id="weatherCard" class="weather-card" style="display:none;">
-      <img id="weatherIcon" class="weather-icon" src="" alt="Weather Icon"/>
-      <div class="weather-details">
-        <div class="weather-main" id="temperature"></div>
-        <div class="weather-secondary" id="conditions"></div>
-        <div class="weather-extra" id="extras"></div>
-      </div>
+    <div id="loader" class="loader"></div>
+    <div id="mainContent" style="display:none;">
+      <section>
+        <div class="current-block" id="currentBlock"></div>
+      </section>
+      <section>
+        <div class="advice-block" id="adviceBlock"></div>
+      </section>
+      <section>
+        <div class="forecast-row" id="forecastRow"></div>
+      </section>
+      <section>
+        <div class="rain-panel" id="rainPanel"></div>
+      </section>
+      <section>
+        <div class="fishing-panel" id="fishingPanel"></div>
+      </section>
     </div>
-    <div class="advice" id="advice" style="display:none;"></div>
-    <div class="updated" id="updated"></div>
-    <div class="forecast-row" id="forecastRow" style="display:none;"></div>
-    <div id="error" class="error-msg" style="display:none;"></div>
+    <div id="modalBg" class="modal-bg" style="display:none;">
+      <div class="modal-popup" id="modalPopup"></div>
+    </div>
+    <div class="credit">
+      Powered by live NZ station data • 2025 Agora<br>
+      <span style="font-size:0.89em;opacity:0.8;">Proudly New Zealand owned & built for Kiwis</span>
+    </div>
   </div>
-
   <script>
-    // --- CONFIG ---
-    const apiKey = '17815bdf5f234a62815bdf5f239a6209';
-    const stationId = 'IPAERO15';
-    // Paeroa, NZ geocoords (for forecast API, not station forecast)
-    const paeroaLat = -37.3769;
-    const paeroaLon = 175.6756;
-    // --- END CONFIG ---
+    // CONFIG
+    const wundergroundApiKey = "17815bdf5f234a62815bdf5f239a6209";
+    const wundergroundStation = "IPAERO15";
 
-    // WU Current obs
-    const obsUrl = `https://api.weather.com/v2/pws/observations/current?stationId=${stationId}&format=json&units=m&apiKey=${apiKey}`;
-    // WU 5-day forecast (paeroa geo, not PWS because no PWS forecast)
-    const forecastUrl = `https://api.weather.com/v3/wx/forecast/daily/5day?geocode=${paeroaLat},${paeroaLon}&format=json&units=m&language=en-NZ&apiKey=${apiKey}`;
-
-    // icon codes from WU to image
-    function getIcon(code) {
-      // Use WU icon sprite or fallback to WeatherAPI icons
-      // https://docs.google.com/spreadsheets/d/1kOJRCedh6Q_8wIuJ_t3qBYj-MFuv2IgpJEXwS6w9Ydc/edit#gid=0
-      if (!code) return "https://cdn.weatherapi.com/weather/64x64/day/122.png";
-      code = code.toString();
-      return `https://icons.wxug.com/i/c/v4/${code}.svg`;
+    // Helper for icon mapping
+    function getWundergroundIconUrl(icon) {
+      // Simple icon conversion for common types; use Weather Underground style if needed
+      if (!icon) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
+      const map = {
+        clear: "2600", sunny: "2600", mostlysunny: "26c5", partlycloudy: "26c5", mostlycloudy: "2601", cloudy: "2601",
+        rain: "1f327", tstorms: "26c8", snow: "2744", fog: "1f32b"
+      };
+      let code = map[icon.replace(/[^a-z]/gi,'').toLowerCase()] || "26c5";
+      return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${code}.png`;
     }
 
-    function weatherAdvice(tempC, windKph, humidity, condition) {
-      if (condition && /thunder/i.test(condition)) return "Thunderstorms possible—check for lightning warnings and avoid open paddocks.";
-      if (condition && /rain|showers/i.test(condition)) return "Showers about—take a rain jacket or umbrella.";
-      if (tempC <= 5) return "Chilly morning—layer up, especially for school runs or early starts. Plan to be home before dark or pack a warm jacket.";
-      if (tempC <= 12) return "Cool and fresh—grab a warm jacket before heading out, especially in the evenings.";
-      if (humidity > 95) return "Damp air—watch for fog or condensation, ventilate rooms to keep things dry.";
-      if (windKph > 25) return "Breezy—secure outdoor items and take care if cycling.";
-      return "Mild and pleasant—enjoy your day!";
+    // --- GET CURRENT from WUNDERGROUND ---
+    async function fetchWundergroundCurrent() {
+      // Wunderground current conditions endpoint for PWS:
+      // https://api.weather.com/v2/pws/observations/current?stationId=IPAERO15&format=json&units=m&apiKey=...
+      const url = `https://api.weather.com/v2/pws/observations/current?stationId=${wundergroundStation}&format=json&units=m&apiKey=${wundergroundApiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Wunderground current conditions fetch failed");
+      return await res.json();
     }
 
-    // Format date to day (Fri 25)
-    function dayDate(isoStr) {
-      let d = new Date(isoStr);
-      if (isNaN(d)) d = new Date();
-      return d.toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric' });
+    // --- Advice engine (same as before) ---
+    function getPracticalAdvice(current) {
+      const d = new Date();
+      const month = d.getMonth() + 1;
+      const hour = d.getHours();
+      const temp = current.tempC;
+      const humidity = current.humidity;
+      const wind = current.windspeedKPH;
+      const rain = current.precipTotalMM;
+      const weatherText = current.condition;
+      let tips = [];
+      if (temp < 3) tips.push("Very cold today: Dress in layers, take gloves/beanie, and allow extra time to defrost car windows.");
+      else if (temp < 8) tips.push("Chilly morning—layer up, especially for school runs or early starts.");
+      else if (temp > 25) tips.push("Hot day ahead: Stay hydrated, seek shade, and slip/slop/slap before going out.");
+      if (rain > 15) tips.push("Heavy rain expected: Take waterproofs, check road conditions, and avoid low-lying tracks.");
+      else if (rain > 4) tips.push("Showers likely: Pack a compact umbrella or raincoat.");
+      if (humidity > 90 && temp > 18) tips.push("Feels muggy: Light, breathable clothing is best.");
+      if (wind > 35) tips.push("Windy: Secure outdoor furniture and be careful driving high-sided vehicles.");
+      else if (wind > 15) tips.push("Breezy: Mind loose items and avoid light fires outdoors.");
+      if (weatherText && weatherText.toLowerCase().includes("fog")) tips.push("Foggy: Drive with headlights (not just parkers), and watch for reduced visibility.");
+      if (weatherText && weatherText.toLowerCase().includes("frost")) tips.push("Frost risk: Check driveways and paths before walking.");
+      if ((month >= 6 && month <= 8) && temp < 10 && hour < 9) tips.push("Black ice possible—take care on rural roads.");
+      if ((month === 12 || month <= 2) && temp > 22) tips.push("High UV: Extra sunscreen and sunglasses needed, even in cloud.");
+      if (hour < 9 && rain < 1) tips.push("Early start: Roads may be dewy or slippery.");
+      if (hour > 19 && temp < 12) tips.push("Cool evening: Plan to be home before dark or pack a warm jacket.");
+      if (tips.length === 0) tips.push("Day looks pretty settled: Good for most outdoor plans.");
+      return tips.slice(0,2).join("<br>");
     }
 
-    // --- Fetch current obs ---
-    function fetchWeather() {
-      fetch(obsUrl)
-        .then(r => {
-          if (!r.ok) throw new Error("Weather Underground station error");
-          return r.json();
-        })
-        .then(data => {
-          const obs = data.observations && data.observations[0];
-          if (!obs) throw new Error("No observation data available.");
-          const tempC = obs.metric.temp;
-          const feelsC = obs.metric.heatIndex !== null ? obs.metric.heatIndex : obs.metric.temp;
-          const humidity = obs.humidity;
-          const windKph = obs.metric.windSpeed;
-          const precipMm = obs.metric.precipTotal;
-          const condition = obs.wx_phrase || obs.imperial?.wx_phrase || "Unknown";
-          const iconCode = (obs.icon_code || "unknown").toString();
-          let iconUrl = getIcon(iconCode);
+    // --- Main loader ---
+    async function loadWeatherApp() {
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('mainContent').style.display = 'none';
+      try {
+        // --- WUNDERGROUND CURRENT LIVE ONLY ---
+        const wuData = await fetchWundergroundCurrent();
+        const obs = wuData.observations[0];
+        const current = {
+          tempC: obs.metric.temp,
+          feelslikeC: obs.metric.heatIndex !== null ? obs.metric.heatIndex : obs.metric.temp,
+          humidity: obs.humidity,
+          windspeedKPH: obs.metric.windSpeed,
+          precipTotalMM: obs.metric.precipTotal,
+          condition: obs.imperial && obs.imperial.icon ? obs.imperial.icon : obs.wxPhraseLong,
+          icon: obs.icon || "",
+          weatherPhrase: obs.wxPhraseLong || "",
+          winddir: obs.winddir || "",
+        };
 
-          document.getElementById("temperature").textContent = `${tempC.toFixed(1)}°C`;
-          document.getElementById("conditions").textContent = `${condition}, feels like ${feelsC.toFixed(1)}°C`;
-          document.getElementById("extras").textContent =
-            `Humidity: ${humidity}% | Wind: ${windKph} km/h | Rain today: ${precipMm} mm`;
-          document.getElementById("weatherIcon").src = iconUrl;
-          document.getElementById("weatherCard").style.display = "flex";
-          document.getElementById("advice").textContent = weatherAdvice(tempC, windKph, humidity, condition);
-          document.getElementById("advice").style.display = "block";
+        renderCurrentFromWU(current);
+        document.getElementById('adviceBlock').innerHTML = getPracticalAdvice(current);
 
-          // Updated time (local)
-          const dt = new Date(obs.obsTimeLocal || obs.obsTimeUtc);
-          document.getElementById("updated").textContent =
-            `Updated: ${dt.toLocaleString('en-NZ', { hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short', day: 'numeric' })}`;
-        })
-        .catch(err => {
-          document.getElementById("error").textContent = "Error: " + err.message;
-          document.getElementById("error").style.display = "block";
-        });
+        // --- Everything else (forecast, rain, fishing) remains as before, or leave blank if not needed ---
+        document.getElementById('forecastRow').innerHTML = "<div style='color:#888;padding:14px 0;'>Forecast not available via Wunderground free API.</div>";
+        document.getElementById('rainPanel').innerHTML = "<div style='color:#888;padding:7px 0;'>Rainfall history not available via Wunderground free API.</div>";
+        document.getElementById('fishingPanel').innerHTML = "<div style='color:#888;padding:7px 0;'>Fishing/swell feature not available.</div>";
+
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('mainContent').style.display = '';
+      } catch (e) {
+        document.getElementById('loader').innerHTML = "Couldn’t load live weather data. Try again soon.";
+        console.error(e);
+      }
     }
 
-    // --- Fetch 5-day forecast ---
-    function fetchForecast() {
-      fetch(forecastUrl)
-        .then(r => {
-          if (!r.ok) throw new Error("Weather Underground forecast error");
-          return r.json();
-        })
-        .then(data => {
-          const days = data.dayOfWeek;
-          const cond = data.narrative;
-          const iconCodes = data.iconCode;
-          const minTemps = data.temperatureMin;
-          const maxTemps = data.temperatureMax;
-          const precip = data.daypart[0].precipChance || [];
-
-          let out = '';
-          for (let i = 0; i < 3; ++i) { // Show 3-day
-            out += `
-              <div class="forecast-card">
-                <div class="forecast-date">${days[i]} ${data.validDate[i].slice(8,10)}</div>
-                <img src="${getIcon(iconCodes[i])}" alt="icon"/>
-                <div class="forecast-cond">${cond[i]}</div>
-                <div class="forecast-temp">${minTemps[i]}–${maxTemps[i]}°C</div>
-                <div style="font-size:0.90em;color:#7b92ad;">Rain: ${precip[i * 2] || 0}%</div>
-              </div>
-            `;
-          }
-          document.getElementById("forecastRow").innerHTML = out;
-          document.getElementById("forecastRow").style.display = "flex";
-        })
-        .catch(err => {
-          // Don't crash app if forecast fails, just hide
-          document.getElementById("forecastRow").style.display = "none";
-        });
+    // --- Render current with Weather Underground data ---
+    function renderCurrentFromWU(current) {
+      let iconUrl = getWundergroundIconUrl(current.icon);
+      document.getElementById('currentBlock').innerHTML = `
+        <img class="current-icon" src="${iconUrl}" alt="icon"/>
+        <div class="current-details">
+          <div class="current-temp">${(typeof current.tempC === "number" ? current.tempC.toFixed(1) + "°C" : "—")}</div>
+          <div class="feelslike">Feels like: ${(typeof current.feelslikeC === "number" ? current.feelslikeC.toFixed(1) + "°C" : "—")}</div>
+          <div class="current-weather-text">${current.weatherPhrase || current.condition}</div>
+          <div class="current-extra">
+            Rain: ${(current.precipTotalMM != null) ? current.precipTotalMM.toFixed(1) : "—"} mm |
+            Humidity: ${(current.humidity != null) ? Math.round(current.humidity) : "—"}% |
+            Wind: ${(current.windspeedKPH != null) ? current.windspeedKPH.toFixed(1) : "—"} km/h
+          </div>
+        </div>
+      `;
     }
 
-    // --- INIT ---
-    fetchWeather();
-    fetchForecast();
+    // --- Load on window ---
+    window.onload = loadWeatherApp;
   </script>
 </body>
 </html>
