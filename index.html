@@ -1,3 +1,4 @@
+<!-- Agora NZ Weather App – Full Fishing+Tide+Swell, Wind/Gust/Cloud/Visibility support -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,7 +45,10 @@
     .rain-label { font-weight: 600; color: #18558e; margin-bottom: 3px; font-size: 1.08rem;}
     .fishing-panel { margin: 25px 18px 0 18px; padding: 14px 14px 12px 14px; border-radius: 12px; background: #eafaf7; box-shadow: 0 2px 7px #bceadd33; color: #18558e; font-size: 1.12rem; font-weight: 500; min-height: 50px;}
     .fish-headline { font-size: 1.18rem; font-weight: bold; margin-bottom: 6px;}
-    .fish-tips { font-size: 1.04rem; margin-top: 7px; color: #217b6a; }
+    .fish-tips { font-size: 1.04rem; margin-top: 7px; color: #217b6a;}
+    .fish-tide { font-size: 1.04rem; margin-top: 9px; color: #165372;}
+    .fish-swell { margin-top:14px; width:100%; text-align:center;}
+    .fish-swell img { border-radius:12px; width:98%; max-width:400px; border:1px solid #d2e6ee; }
     @media (max-width: 600px) { .app-container { box-shadow: none; border-radius: 0;} .forecast-row { padding-left: 3px;} .modal-popup { border-radius: 21px 21px 0 0; padding: 11px 6px 17px 7px;} }
     .loader { margin: 60px auto 34px auto; border: 7px solid #d7e3f5; border-top: 7px solid #0f82c6; border-radius: 50%; width: 44px; height: 44px; animation: spin 1.05s linear infinite;}
     @keyframes spin { 0% { transform: rotate(0);} 100% { transform: rotate(360deg);} }
@@ -76,16 +80,18 @@
     <div class="credit">Powered by live NZ station data • 2025 Agora<br><span style="font-size:0.89em;opacity:0.8;">Proudly New Zealand owned & built for Kiwis</span></div>
   </div>
   <script>
-    // --- CONFIG
+    // CONFIG
     const wuStationId = "IPAERO15";
     const wuApiKey = "17815bdf5f234a62815bdf5f239a6209";
     const stationId = "pws_paeroa";
     const fishingStationId = "pws_COROMANDELTOWN1";
     const apiClientId = "U8feQfLlcEfcXDfsWZs4C";
     const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+    const tideApiKey = "demo"; // replace with your free WorldTides API key: https://www.worldtides.info/developer
+
     function getCondUrlWU(station) { return `https://api.weather.com/v2/pws/observations/current?stationId=${station}&format=json&units=m&apiKey=${wuApiKey}`; }
     function getCondUrl(station) { return `https://data.api.xweather.com/conditions/${station}?format=json&plimit=1&client_id=${apiClientId}&client_secret=${apiClientSecret}`; }
-    function getForecastsUrl(station) { return `https://data.api.xweather.com/forecasts/${station}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.icon,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.minFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.uvIndex,periods.sunriseISO,periods.sunsetISO,periods.clouds&client_id=${apiClientId}&client_secret=${apiClientSecret}`; }
+    function getForecastsUrl(station) { return `https://data.api.xweather.com/forecasts/${station}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.icon,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.minFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.uvIndex,periods.sunriseISO,periods.sunsetISO,periods.clouds,periods.visibilityKM&client_id=${apiClientId}&client_secret=${apiClientSecret}`; }
     function getHistoryUrl(station) {
       const now = new Date();
       const end = now.toISOString().slice(0,10);
@@ -104,85 +110,25 @@
       if (phrase.includes('Thunder')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
       return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
     }
-
-    // --- Wind deg to cardinal
     function degToCardinal(deg) {
       if (deg == null || isNaN(deg)) return "";
       const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
       return dirs[Math.round(((deg % 360) / 45)) % 8];
     }
 
-    // --- State for pressure trend
     let previousPressures = [];
-    let lastRainWU = { today: 0, yesterday: 0 };
 
-    // --- AI-style advice with data explanations
-    function generateAdvice(period, isToday, rainTotal7, gust, uv, cloud, winddir) {
-      let advice = [];
-      let tMax = period.maxTempC || period.tempC || period.temp || null;
-      let tMin = period.minTempC || null;
-      let pop = period.pop || 0;
-      let rain = period.precipMM || 0;
-      let wind = period.windSpeedMaxKPH || period.windSpeedKPH || period.windSpeed || 0;
-      let summary = (period.weather && typeof period.weather === "string") ? period.weather : "";
-      let todayName = isToday ? "Today" : "";
-
-      // Rain
-      if (rain > 10) advice.push("Prepare for heavy rain, localised flooding possible.");
-      else if (rain > 2) advice.push("Rain/showers likely. Keep jackets or umbrellas handy.");
-      else if (pop > 50) advice.push("Chance of showers, check before heading out.");
-
-      // Wind/gusts
-      if (gust && gust > 40) advice.push("Strong gusts possible—secure outdoor items.");
-      else if (wind > 20) advice.push("Breezy at times—watch loose items.");
-
-      // Temperature
-      if (tMax >= 27) advice.push("Hot day—sunburn risk and heat stress possible.");
-      else if (tMax >= 22) advice.push("Warm day, sunscreen needed.");
-      else if (tMax < 5) advice.push("Very cold—layer up and watch for ice.");
-      else if (tMax < 13 && tMin !== null && tMin < 5) advice.push("Chilly day, morning frost possible.");
-
-      // UV
-      if (uv && uv >= 7) advice.push("Extreme UV risk, use protection outdoors.");
-
-      // Cloud
-      if (cloud !== undefined && cloud > 85) advice.push("Cloudy, little sun expected.");
-      else if (cloud < 40) advice.push("Sunny spells likely.");
-
-      // 7-day rain
-      if (isToday && rainTotal7 > 40) advice.unshift("Prepare for a wet week—fields may be muddy, streams full.");
-
-      // "No weather"
-      if (advice.length === 0) advice.push("Settled day, good for outdoor plans.");
-
-      // Explain wind dir for first day
-      if (isToday && winddir) advice.push(`Winds mainly from ${degToCardinal(winddir)}.`);
-
-      return advice.slice(0,3).join(" ");
-    }
-
-    // --- Main load: WU for current, XWeather for forecast, WU for rain
     async function loadWeatherApp() {
       document.getElementById('loader').style.display = 'block';
       document.getElementById('mainContent').style.display = 'none';
       try {
-        // Get current obs from Weather Underground
         const wuRes = await fetch(getCondUrlWU(wuStationId));
         const wuJson = await wuRes.json();
         const obs = (wuJson && wuJson.observations && wuJson.observations[0]) || {};
-        // Rain live from WU
-        let rainTodayWU = obs.metric?.precipTotal ?? obs.precipTotal ?? 0;
-        let rainYesterdayWU = 0;
-        // Try to get yesterday's rain from obs history
-        if (obs.metric?.precipTotalLast24h !== undefined) {
-          rainYesterdayWU = obs.metric.precipTotalLast24h;
-        }
 
-        // Store for forecast card advice
-        lastRainWU.today = rainTodayWU;
-        lastRainWU.yesterday = rainYesterdayWU;
+        const rainTodayWU = obs.metric?.precipTotal ?? obs.precipTotal ?? 0;
+        const rainYesterdayWU = obs.metric?.precipTotalLast24h ?? 0;
 
-        // Current obs for panel
         const currentData = {
           temp: obs.metric ? obs.metric.temp : null,
           feelslike: obs.metric ? obs.metric.heatIndex : null,
@@ -206,22 +152,22 @@
           previousPressures = previousPressures.filter(p => (currentData.obsEpoch - p.time) < 3 * 3600 * 1000);
         }
 
-        // Get forecast (XWeather)
         const fcRes = await fetch(getForecastsUrl(stationId));
         const fcJson = await fcRes.json();
         if (!fcJson.success) throw new Error('No forecast data');
         const forecastDays = fcJson.response[0].periods;
-        // Merge in extra info from forecast where available for today
         const todayFc = forecastDays[0];
+
+        // merge extra info
         currentData.sunrise = todayFc.sunriseISO;
         currentData.sunset = todayFc.sunsetISO;
         currentData.clouds = todayFc.clouds !== undefined ? todayFc.clouds : currentData.clouds;
         currentData.uv = todayFc.uvIndex || currentData.uv;
+        currentData.visibility = todayFc.visibilityKM || currentData.visibility;
 
         renderCurrentWU(currentData, todayFc);
-        renderAdvice(currentData, todayFc, lastRainWU.today, lastRainWU.yesterday);
-
-        renderForecasts(forecastDays, lastRainWU.today);
+        renderAdvice(currentData, todayFc, rainTodayWU, rainYesterdayWU);
+        renderForecasts(forecastDays, rainTodayWU);
         await renderRainPanel(stationId, forecastDays, rainTodayWU, rainYesterdayWU);
         await renderFishingPanel();
 
@@ -241,11 +187,8 @@
       return delta > 0 ? "rising" : "falling";
     }
 
-    // --- Clean grid for current block
     function renderCurrentWU(p, todayForecast) {
       let iconUrl = getIconUrl(todayForecast);
-
-      // Wind/gusts
       let windVal = (p.windSpeed != null) ? Number(p.windSpeed).toFixed(1) : null;
       let gustVal = (p.windGust != null) ? Number(p.windGust).toFixed(1) : null;
       let windDirDeg = p.windDir;
@@ -270,7 +213,7 @@
         ["Pressure", pressureTxt],
         ["Dew Point", p.dewpt != null ? `${p.dewpt.toFixed(1)}°C` : "—"],
         ["Cloud Cover", (p.clouds != null && p.clouds !== "—") ? `${p.clouds}%` : (todayForecast.clouds != null ? `${todayForecast.clouds}%` : "—")],
-        ["Visibility", (p.visibility != null && p.visibility !== "—") ? `${Number(p.visibility).toFixed(1)} km` : "—"],
+        ["Visibility", (p.visibility != null && p.visibility !== "—") ? `${Number(p.visibility).toFixed(1)} km` : (todayForecast.visibilityKM != null ? Number(todayForecast.visibilityKM).toFixed(1) + " km" : "—")],
         ["Solar", p.solarRadiation != null ? `${p.solarRadiation} W/m²` : "—"],
         ["UV", p.uv != null ? p.uv : "—"],
         ["Sunrise", p.sunrise ? new Date(p.sunrise).toLocaleTimeString('en-NZ', {hour:'2-digit', minute:'2-digit'}) : "—"],
@@ -289,7 +232,6 @@
     }
 
     function renderAdvice(p, todayForecast, rainTodayWU, rainYesterdayWU) {
-      // Add current AI advice and explain key readings
       let explain = [];
       if (rainTodayWU > 10) explain.push("Heavy rainfall so far today – watch for pooling on paddocks and accessways.");
       else if (rainTodayWU > 3) explain.push("Ongoing showers today, bring rain gear.");
@@ -303,12 +245,12 @@
     }
 
     function renderForecasts(periods, rainTodayWU) {
-      // Calculate total rain for 7 days for summary advice
       let rain7 = 0;
       for (let i = 0; i < Math.min(periods.length, 7); ++i) rain7 += periods[i].precipMM || 0;
       const row = document.getElementById('forecastRow');
       row.innerHTML = '';
       periods.forEach((per, idx) => {
+        let windStr = per.windSpeedMaxKPH ? `${per.windSpeedMinKPH}–${per.windSpeedMaxKPH} km/h (${degToCardinal(per.windDirMin)}–${degToCardinal(per.windDirMax)})` : "—";
         let advice = generateAdvice(per, idx === 0, rain7, per.windSpeedMaxKPH || per.windGust, per.uvIndex, per.clouds, per.windDirMax);
         const card = document.createElement('div');
         card.className = 'forecast-card';
@@ -320,7 +262,8 @@
           <div class="forecast-summary">${per.weather}</div>
           <div class="forecast-temps">${per.minTempC.toFixed(1)}–${per.maxTempC.toFixed(1)}°C</div>
           <div class="forecast-rain">Rain: ${per.precipMM.toFixed(1)} mm</div>
-          <div style="font-size:0.92em;color:#448;">Wind: ${per.windSpeedMaxKPH}km/h</div>
+          <div style="font-size:0.92em;color:#448;">Wind: ${windStr}</div>
+          <div style="font-size:0.92em;color:#448;">Cloud: ${per.clouds !== undefined ? per.clouds + "%" : "—"} | Vis: ${per.visibilityKM !== undefined ? per.visibilityKM + " km" : "—"}</div>
           <div class="forecast-advice">${advice}</div>
         `;
         card.onclick = () => showForecastDetails(per, advice);
@@ -348,6 +291,7 @@
           Sunrise: ${per.sunriseISO ? new Date(per.sunriseISO).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'}) : "–"}<br>
           Sunset: ${per.sunsetISO ? new Date(per.sunsetISO).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'}) : "–"}<br>
           Cloud Cover: ${per.clouds !== undefined ? per.clouds + "%" : "–"}<br>
+          Visibility: ${per.visibilityKM !== undefined ? per.visibilityKM + " km" : "—"}<br>
           <hr>
           <b>Prepare for today:</b><br>
           <span style="font-size:1.04em;">${advice}</span>
@@ -370,11 +314,9 @@
       return d.toLocaleDateString("en-NZ", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
     }
 
-    // --- Rain panel always uses WU live if available, fallback to forecast if not
     async function renderRainPanel(stationId, forecastPeriods, rainTodayWU, rainYesterdayWU) {
       let rainToday = rainTodayWU, rainYesterday = rainYesterdayWU, rain7 = 0, rain30 = 0, rainYTD = 0;
       try {
-        // Try get history from forecast API for 7/30/YTD, but keep today/yesterday from WU
         const hisRes = await fetch(getHistoryUrl(stationId));
         const his = await hisRes.json();
         let rainByDay = {};
@@ -411,26 +353,65 @@
       `;
     }
 
+    // --- Fishing panel: tides, wind/gust/vis/cloud/swell
     async function renderFishingPanel() {
       const panel = document.getElementById('fishingPanel');
       panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">Loading latest...</div>';
+
+      let tideHtml = '';
+      let swellHtml = `
+        <div class="fish-swell">
+          <a href="https://www.swellmap.com/surf/forecast/thames" target="_blank" rel="noopener">
+            <img src="https://www.swellmap.com/static/surf/forecasts/thames/thames-surf-forecast-large.png" alt="Thames Swell Map"/><br>
+            <span style="font-size:0.98em;">Tap for full Swellmap Thames</span>
+          </a>
+        </div>
+      `;
+      // Tides: WorldTides (API) fallback to NIWA
+      try {
+        const res = await fetch(`https://www.worldtides.info/api/v3?heights&extremes&lat=-37.137&lon=175.544&days=1&key=${tideApiKey}`);
+        const js = await res.json();
+        if (js && js.extremes && js.extremes.length > 0) {
+          tideHtml = '<div class="fish-tide"><b>Tide for Thames:</b><br>';
+          for (let i=0; i<js.extremes.length; ++i) {
+            const t = js.extremes[i];
+            const tTime = new Date(t.date).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'});
+            tideHtml += `${t.type} at ${tTime} (${t.height.toFixed(2)}m)<br>`;
+          }
+          tideHtml += '</div>';
+        }
+      } catch { tideHtml = '<div class="fish-tide">Live tides unavailable (API limit).</div>'; }
+
+      // Wind, gust, cloud, vis, rain for Coromandel fishing spot
       try {
         const res = await fetch(getCondUrl(fishingStationId));
         const js = await res.json();
         if (!js.success) throw new Error("No station data");
         const p = js.response[0].periods[0];
+        let fishInfo = [];
+        fishInfo.push(`Temp: ${p.tempC.toFixed(1)}°C`);
+        fishInfo.push(`Wind: ${p.windSpeedKPH.toFixed(1)} km/h / Gust ${p.windGustKPH ? p.windGustKPH.toFixed(1) : "—"} km/h (${degToCardinal(p.windDir)})`);
+        fishInfo.push(`Cloud: ${p.clouds !== undefined ? p.clouds + "%" : "—"}`);
+        fishInfo.push(`Vis: ${p.visibilityKM !== undefined ? p.visibilityKM + " km" : "—"}`);
+        fishInfo.push(`Rain: ${p.precipMM ? p.precipMM.toFixed(1) : 0} mm`);
         let tips = [];
-        if (p.windSpeedKPH < 10 && p.tempC >= 10 && p.tempC <= 24 && p.precipMM < 2) {
-          tips.push("Excellent fishing: Light winds, mild temps, little rain. Try mussel farms or river mouth.");
-        } else if (p.windSpeedKPH < 16 && p.precipMM < 4) {
-          tips.push("Good for fishing inshore and estuaries—watch wind gusts and rain squalls.");
+        if (p.windSpeedKPH < 10 && p.tempC >= 10 && p.tempC <= 24 && (p.precipMM||0) < 2) {
+          tips.push("Excellent fishing: Light winds, mild temps, little rain.");
+        } else if (p.windSpeedKPH < 16 && (p.precipMM||0) < 4) {
+          tips.push("Good for fishing inshore and estuaries—watch wind gusts.");
         } else {
-          tips.push("Not ideal: Strong winds or rain likely. Try rock fishing or inside the harbour.");
+          tips.push("Not ideal: Strong winds or rain likely.");
         }
-        tips.push(`<b>Live:</b> Temp: ${p.tempC.toFixed(1)}°C, Wind: ${p.windSpeedKPH.toFixed(1)} km/h, Rain: ${p.precipMM.toFixed(1)} mm`);
-        panel.innerHTML = `<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">${tips.join("<br>")}</div>`;
+        panel.innerHTML =
+          `<div class="fish-headline">Coromandel Fishing & Swell</div>
+           <div class="fish-tips">${tips.join('<br>')}</div>
+           <div style="font-size:1em;margin:8px 0 4px 0;"><b>Live:</b> ${fishInfo.join(' | ')}</div>
+           ${tideHtml}${swellHtml}`;
       } catch(e) {
-        panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips" style="color:#ba2a19;">Couldn’t load live data. Try again soon.</div>';
+        panel.innerHTML =
+          `<div class="fish-headline">Coromandel Fishing & Swell</div>
+           <div class="fish-tips" style="color:#ba2a19;">Couldn’t load live data. Try again soon.</div>
+           ${tideHtml}${swellHtml}`;
       }
     }
 
