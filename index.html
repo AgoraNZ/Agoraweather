@@ -5,6 +5,7 @@
   <title>Agora NZ Weather – Smarter Kiwi Weather App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="description" content="The only weather app built on real NZ station data with uniquely Kiwi weather advice."/>
+  <link rel="manifest" href="manifest.json">
   <style>
     body {
       margin: 0; padding: 0;
@@ -47,7 +48,9 @@
     .current-temp { font-size: 2.1rem; font-weight: bold; margin: 0; }
     .feelslike { font-size: 1.11rem; opacity: 0.72; margin-bottom: 2px;}
     .current-weather-text { font-size: 1.02rem; margin-top: 3px; color: #2564a3; font-weight: 500;}
-    .current-extra { font-size: 0.98rem; margin-top: 7px; opacity: 0.81;}
+    .current-extra, .current-extra2 {
+      font-size: 0.98rem; margin-top: 7px; opacity: 0.81; line-height: 1.5;
+    }
     .advice-block {
       margin: 17px 18px 0 18px; padding: 13px 15px 13px 15px;
       border-radius: 10px; background: #e5f2ff;
@@ -159,7 +162,7 @@
       return `https://data.api.xweather.com/conditions/${station}?format=json&plimit=1&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
     function getForecastsUrl(station) {
-      return `https://data.api.xweather.com/forecasts/${station}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.icon,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.minFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
+      return `https://data.api.xweather.com/forecasts/${station}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.icon,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.minFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather,periods.uvIndex,periods.sunriseISO,periods.sunsetISO,periods.clouds&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
     function getHistoryUrl(station) {
       const now = new Date();
@@ -168,6 +171,7 @@
       return `https://data.api.xweather.com/observations/${station}?from=${start}&to=${end}&fields=periods.dateTimeISO,periods.precipMM&plimit=288&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
     function getIconUrl(period) {
+      // Always use XWeather/forecast logic for icon
       let icon = period.icon || (period.weather && period.weather.icon);
       if (icon) return `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
       const phrase = (period.weather && period.weather.phrase) || period.weather || '';
@@ -179,6 +183,9 @@
       if (phrase.includes('Thunder')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
       return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
     }
+
+    // --- State for pressure trend
+    let previousPressures = [];
 
     // --- Advice engine unchanged
     function getPracticalAdvice(actual, forecast) {
@@ -213,7 +220,7 @@
       return tips.slice(0,2).join("<br>");
     }
 
-    // --- Main load function: WU for current, xweather for forecast ---
+    // --- Main load function: WU for current, XWeather for forecast
     async function loadWeatherApp() {
       document.getElementById('loader').style.display = 'block';
       document.getElementById('mainContent').style.display = 'none';
@@ -222,6 +229,7 @@
         const wuRes = await fetch(getCondUrlWU(wuStationId));
         const wuJson = await wuRes.json();
         const obs = (wuJson && wuJson.observations && wuJson.observations[0]) || {};
+
         // Pull key data from WU
         const currentData = {
           temp: obs.metric ? obs.metric.temp : null,
@@ -231,13 +239,36 @@
           windGust: obs.windGust,
           precip: obs.metric ? obs.metric.precipRate : null,
           weather: obs.wxPhraseLong || obs.icon,
+          pressure: obs.metric ? obs.metric.pressure : null,
+          dewpt: obs.metric ? obs.metric.dewpt : null,
+          uv: obs.uv || null,
+          visibility: obs.visibility || null,
+          solarRadiation: obs.solarRadiation || null,
+          clouds: obs.clouds || null,
+          // Pressure history for trend
+          obsEpoch: obs.obsTimeUtc ? new Date(obs.obsTimeUtc).getTime() : Date.now()
         };
-        // xWeather for forecast (unchanged)
+
+        // Store last few pressures for pressure trend
+        if (currentData.pressure) {
+          previousPressures.push({time: currentData.obsEpoch, value: currentData.pressure});
+          // Keep only last 3 hours of records
+          previousPressures = previousPressures.filter(p => (currentData.obsEpoch - p.time) < 3 * 3600 * 1000);
+        }
+
+        // Get forecast (XWeather)
         const fcRes = await fetch(getForecastsUrl(stationId));
         const fcJson = await fcRes.json();
         if (!fcJson.success) throw new Error('No forecast data');
-        renderCurrentWU(currentData, fcJson.response[0].periods[0]);
-        renderAdvice(currentData, fcJson.response[0].periods[0]);
+        const todayFc = fcJson.response[0].periods[0];
+        // Merge in extra info from forecast where available
+        currentData.sunrise = todayFc.sunriseISO;
+        currentData.sunset = todayFc.sunsetISO;
+        currentData.clouds = todayFc.clouds !== undefined ? todayFc.clouds : currentData.clouds;
+        currentData.uv = todayFc.uvIndex || currentData.uv;
+
+        renderCurrentWU(currentData, todayFc);
+        renderAdvice(currentData, todayFc);
         renderForecasts(fcJson.response[0].periods);
         await renderRainPanel(stationId, fcJson.response[0].periods);
         await renderFishingPanel();
@@ -249,9 +280,32 @@
       }
     }
 
-    // --- Custom current panel: always use your icon logic and show wind gust ---
+    // --- Helper for pressure trend
+    function calcPressureTrend() {
+      if (previousPressures.length < 2) return null;
+      let sorted = previousPressures.slice().sort((a, b) => a.time - b.time);
+      let delta = sorted[sorted.length-1].value - sorted[0].value;
+      if (Math.abs(delta) < 0.5) return "steady";
+      return delta > 0 ? "rising" : "falling";
+    }
+
+    // --- Custom current panel: always use your icon logic and show all extras if available
     function renderCurrentWU(p, todayForecast) {
-      let iconUrl = getIconUrl({weather: p.weather || todayForecast.weather});
+      // Always use forecast icon logic for icon (never WU/MetService/etc)
+      let iconUrl = getIconUrl(todayForecast);
+
+      // Format extra fields
+      let pressureTxt = p.pressure ? `${p.pressure.toFixed(1)} hPa` : "—";
+      let trend = calcPressureTrend();
+      if (trend) pressureTxt += ` (${trend})`;
+      let dewptTxt = p.dewpt != null ? `${p.dewpt.toFixed(1)}°C` : "—";
+      let uvTxt = p.uv != null ? p.uv : "—";
+      let sunriseTxt = p.sunrise ? new Date(p.sunrise).toLocaleTimeString('en-NZ', {hour:'2-digit', minute:'2-digit'}) : "—";
+      let sunsetTxt = p.sunset ? new Date(p.sunset).toLocaleTimeString('en-NZ', {hour:'2-digit', minute:'2-digit'}) : "—";
+      let cloudsTxt = p.clouds != null ? `${p.clouds}%` : "—";
+      let visTxt = p.visibility != null ? `${Number(p.visibility).toFixed(1)} km` : "—";
+      let solTxt = p.solarRadiation != null ? `${p.solarRadiation} W/m²` : "—";
+
       document.getElementById('currentBlock').innerHTML = `
         <img class="current-icon" src="${iconUrl}" alt="icon"/>
         <div class="current-details">
@@ -264,11 +318,20 @@
             Wind: ${(p.windSpeed != null) ? Number(p.windSpeed).toFixed(1) + " km/h" : "—"}
             ${(p.windGust != null && p.windGust > p.windSpeed) ? `(gust ${Number(p.windGust).toFixed(1)} km/h)` : ""}
           </div>
+          <div class="current-extra2">
+            Pressure: ${pressureTxt} &nbsp;|&nbsp;
+            Dew Point: ${dewptTxt}<br>
+            UV Index: ${uvTxt} &nbsp;|&nbsp;
+            Sunrise: ${sunriseTxt} &nbsp;|&nbsp; Sunset: ${sunsetTxt}<br>
+            Cloud cover: ${cloudsTxt} &nbsp;|&nbsp;
+            Visibility: ${visTxt} &nbsp;|&nbsp;
+            Solar: ${solTxt}
+          </div>
         </div>
       `;
     }
 
-    // --- The rest (forecast etc) is your code unchanged ---
+    // --- The rest (forecast etc) is unchanged
     function renderAdvice(p, todayForecast) {
       document.getElementById('adviceBlock').innerHTML = getPracticalAdvice(p, todayForecast);
     }
@@ -308,6 +371,10 @@
           Humidity: ${per.minHumidity}–${per.maxHumidity}%<br>
           Rainfall: ${per.precipMM.toFixed(1)} mm<br>
           Chance of Rain: ${per.pop}%<br>
+          UV Index: ${per.uvIndex || "–"}<br>
+          Sunrise: ${per.sunriseISO ? new Date(per.sunriseISO).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'}) : "–"}<br>
+          Sunset: ${per.sunsetISO ? new Date(per.sunsetISO).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'}) : "–"}<br>
+          Cloud Cover: ${per.clouds !== undefined ? per.clouds + "%" : "–"}<br>
           <hr>
           <b>Prepare for today:</b><br>
           <span style="font-size:1.04em;">${getPracticalAdvice(per, per)}</span>
