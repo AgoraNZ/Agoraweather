@@ -6,50 +6,103 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="description" content="The only weather app built on real NZ station data with uniquely Kiwi weather advice."/>
   <style>
-    body {margin: 0; padding: 0; background: #f4f7fb; font-family: 'Segoe UI', Arial, sans-serif; color: #15304b; min-height: 100vh;}
-    .app-container {max-width: 500px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 5px 30px #193a5e18; padding-bottom: 34px; min-height: 100vh; display: flex; flex-direction: column;}
-    header {background: linear-gradient(90deg, #18558e 68%, #15b2c1 100%); color: #fff; padding: 34px 22px 18px 22px; border-radius: 0 0 30px 30px; box-shadow: 0 3px 16px #18558e10; text-align: left;}
+    body {
+      margin: 0; padding: 0;
+      background: #f4f7fb;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #15304b;
+      min-height: 100vh;
+    }
+    .app-container {
+      max-width: 500px; margin: 0 auto; background: #fff;
+      border-radius: 12px; box-shadow: 0 5px 30px #193a5e18;
+      padding-bottom: 34px; min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    header {
+      background: linear-gradient(90deg, #18558e 68%, #15b2c1 100%);
+      color: #fff; padding: 34px 22px 18px 22px;
+      border-radius: 0 0 30px 30px;
+      box-shadow: 0 3px 16px #18558e10;
+      text-align: left;
+    }
     .main-title { font-size: 2.07rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px;}
     .sub-title { font-size: 1.09rem; opacity: 0.94; font-weight: 400; margin-bottom: 0;}
     .station-select-row { display: flex; align-items: center; gap: 9px; margin-top: 14px; margin-bottom: 7px;}
     select, button { font-size: 1rem; padding: 5px 10px; border-radius: 6px; border: 1px solid #18558e;
       background: #f4f7fb; color: #1c293a; font-family: inherit; }
     select:disabled { background: #e7eaf3; color: #888; }
-    .current-block { margin: 17px 18px 0 18px; padding: 17px 11px; border-radius: 12px; background: #eaf3fa; box-shadow: 0 2px 8px #cad8e850; display: flex; align-items: center; gap: 14px;}
-    .current-icon { width: 62px; height: 62px; object-fit: contain; background: #fff; border-radius: 50%; border: 2.5px solid #18558e; padding: 6px; box-shadow: 0 0 8px #18558e18; margin-right: 8px;}
+
+    .current-block {
+      margin: 17px 18px 0 18px; padding: 17px 11px;
+      border-radius: 12px; background: #eaf3fa;
+      box-shadow: 0 2px 8px #cad8e850;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .current-icon {
+      width: 62px; height: 62px; object-fit: contain; background: #fff;
+      border-radius: 50%; border: 2.5px solid #18558e;
+      padding: 6px; box-shadow: 0 0 8px #18558e18; margin-right: 8px;
+    }
     .current-details { flex: 1; }
     .current-temp { font-size: 2.1rem; font-weight: bold; margin: 0; }
     .feelslike { font-size: 1.11rem; opacity: 0.72; margin-bottom: 2px;}
     .current-weather-text { font-size: 1.02rem; margin-top: 3px; color: #2564a3; font-weight: 500;}
     .current-extra { font-size: 0.98rem; margin-top: 7px; opacity: 0.81;}
-    .advice-block { margin: 17px 18px 0 18px; padding: 13px 15px 13px 15px; border-radius: 10px; background: #e5f2ff;
-      color: #1e364a; font-size: 1.10rem; font-weight: 500; box-shadow: 0 2px 8px #c8e6ff55; min-height: 58px;}
+    .advice-block {
+      margin: 17px 18px 0 18px; padding: 13px 15px 13px 15px;
+      border-radius: 10px; background: #e5f2ff;
+      color: #1e364a; font-size: 1.10rem; font-weight: 500; box-shadow: 0 2px 8px #c8e6ff55;
+      min-height: 58px;
+    }
     .forecast-row { margin: 18px 0 0 0; padding-left: 14px; display: flex; overflow-x: auto; gap: 9px; scrollbar-width: thin; }
-    .forecast-card { flex: 0 0 118px; background: #f7faff; border-radius: 12px; box-shadow: 0 2px 7px #aac2e660; display: flex; flex-direction: column; align-items: center;
-      padding: 11px 7px 13px 7px; cursor: pointer; transition: box-shadow 0.2s; border: 2px solid transparent; min-width: 108px; max-width: 128px;}
+    .forecast-card {
+      flex: 0 0 118px; background: #f7faff; border-radius: 12px;
+      box-shadow: 0 2px 7px #aac2e660; display: flex; flex-direction: column; align-items: center;
+      padding: 11px 7px 13px 7px; cursor: pointer; transition: box-shadow 0.2s; border: 2px solid transparent;
+      min-width: 108px; max-width: 128px;
+    }
     .forecast-card.selected, .forecast-card:hover { border: 2.5px solid #18558e; box-shadow: 0 6px 16px #aac2e680; background: #e2f3ff;}
     .forecast-icon { width: 41px; height: 41px; margin-bottom: 6px; margin-top: 2px;}
     .forecast-day { font-weight: 600; font-size: 1.01rem; margin-bottom: 2px; }
     .forecast-summary { font-size: 0.97rem; margin-bottom: 4px; color: #2857a1; min-height: 18px; text-align: center;}
     .forecast-temps { font-size: 1.07rem; font-weight: 500; color: #285680; margin-bottom: 1px;}
     .forecast-rain { font-size: 0.91rem; color: #0a6899; margin-bottom: 0;}
-    .modal-bg {position: fixed; left:0; top:0; right:0; bottom:0; background: #23324c45; z-index: 50; display: flex; align-items: flex-end; justify-content: center;}
-    .modal-popup {width: 100%; max-width: 470px; background: #fff; border-radius: 22px 22px 0 0; box-shadow: 0 10px 40px #23324c70; padding: 23px 18px 18px 18px; animation: modalIn 0.3s;}
+    .modal-bg {
+      position: fixed; left:0; top:0; right:0; bottom:0; background: #23324c45;
+      z-index: 50; display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-popup {
+      width: 100%; max-width: 470px; background: #fff; border-radius: 22px 22px 0 0;
+      box-shadow: 0 10px 40px #23324c70; padding: 23px 18px 18px 18px; animation: modalIn 0.3s;
+    }
     @keyframes modalIn { from { transform: translateY(100px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
     .modal-header { font-size: 1.30rem; font-weight: bold; margin-bottom: 7px; color: #18558e;}
     .modal-close-btn { position: absolute; top: 18px; right: 23px; background: none; border: none;
       font-size: 1.7rem; color: #6c7c8c; cursor: pointer; z-index: 100; }
     .modal-details { margin-top: 6px; font-size: 1.07rem; color: #23415c;}
-    .rain-panel { margin: 18px 18px 0 18px; padding: 12px 12px 10px 12px; border-radius: 10px; background: #ecf8ff; color: #15304b;
-      box-shadow: 0 2px 8px #c8e6ff40; font-size: 1.03rem; line-height: 1.35em;}
+    .rain-panel {
+      margin: 18px 18px 0 18px; padding: 12px 12px 10px 12px;
+      border-radius: 10px; background: #ecf8ff; color: #15304b;
+      box-shadow: 0 2px 8px #c8e6ff40; font-size: 1.03rem; line-height: 1.35em;
+    }
     .rain-label { font-weight: 600; color: #18558e; margin-bottom: 3px; font-size: 1.08rem;}
-    .fishing-panel {margin: 25px 18px 0 18px; padding: 14px 14px 12px 14px; border-radius: 12px; background: #eafaf7;
-      box-shadow: 0 2px 7px #bceadd33; color: #18558e; font-size: 1.12rem; font-weight: 500; min-height: 50px;}
+    /* FISHING SECTION */
+    .fishing-panel {
+      margin: 25px 18px 0 18px; padding: 14px 14px 12px 14px;
+      border-radius: 12px; background: #eafaf7;
+      box-shadow: 0 2px 7px #bceadd33;
+      color: #18558e; font-size: 1.12rem; font-weight: 500;
+      min-height: 50px;
+    }
     .fish-headline { font-size: 1.18rem; font-weight: bold; margin-bottom: 6px;}
     .fish-tips { font-size: 1.04rem; margin-top: 7px; color: #217b6a; }
     @media (max-width: 600px) { .app-container { box-shadow: none; border-radius: 0;} .forecast-row { padding-left: 3px;}
       .modal-popup { border-radius: 21px 21px 0 0; padding: 11px 6px 17px 7px;} }
-    .loader { margin: 60px auto 34px auto; border: 7px solid #d7e3f5; border-top: 7px solid #0f82c6; border-radius: 50%; width: 44px; height: 44px; animation: spin 1.05s linear infinite;}
+    .loader {
+      margin: 60px auto 34px auto; border: 7px solid #d7e3f5; border-top: 7px solid #0f82c6;
+      border-radius: 50%; width: 44px; height: 44px; animation: spin 1.05s linear infinite;
+    }
     @keyframes spin { 0% { transform: rotate(0);} 100% { transform: rotate(360deg);} }
     .credit { text-align: center; color: #b4c2d3; font-size: 0.96em; margin: 31px auto 0 auto;}
     .station-select-row label { font-size: 1em; color: #133958;}
@@ -96,11 +149,9 @@
   <script>
     // ====== CONFIG ======
     const stationId = "pws_paeroa";
-    const coroWeatherStationId = "pws_COROMANDELTOWN1";
+    const fishingStationId = "pws_COROMANDELTOWN1";
     const apiClientId = "U8feQfLlcEfcXDfsWZs4C";
     const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-    // Thames/Coromandel fishing spot: Tararu, near Thames, -37.1392, 175.5398
-    const thamesLat = -37.1392, thamesLon = 175.5398;
 
     function getForecastsUrl(station) {
       return `https://data.api.xweather.com/forecasts/${station}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.icon,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.minFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
@@ -108,7 +159,7 @@
     function getSummaryUrl(station) {
       return `https://data.api.xweather.com/conditions/summary/${station}?format=json&fields=loc,periods.dateTimeISO,periods.icon,periods.temp,periods.dewpoint,periods.feelslike,periods.humidity,periods.windSpeed,periods.weather,periods.precip&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
-    // ICON LOGIC
+    // ICON LOGIC: prefer period.icon, else weather.icon, else map
     function getIconUrl(period) {
       let icon = period.icon || (period.weather && period.weather.icon);
       if (icon) return `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
@@ -121,7 +172,8 @@
       if (phrase.includes('Thunder')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
       return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
     }
-    // === PRACTICAL ADVICE ENGINE (day prep) ===
+
+    // === PRACTICAL ADVICE ENGINE (day prep, not quirky lines) ===
     function getPracticalAdvice(actual, forecast) {
       const d = new Date();
       const month = d.getMonth() + 1;
@@ -130,12 +182,14 @@
                      : (month >= 3 && month <= 5) ? 'Autumn'
                      : (month >= 6 && month <= 8) ? 'Winter'
                      : 'Spring';
+      // Data extraction
       const p = actual.periods[0];
       const temp = (p.temp && p.temp.avgC != null) ? p.temp.avgC : forecast.maxTempC;
       const humidity = (p.humidity && p.humidity.avg) || forecast.maxHumidity;
       const wind = (p.windSpeed && p.windSpeed.avgKPH) || forecast.windSpeedMaxKPH;
       const rain = (p.precip && p.precip.totalMM) || forecast.precipMM || 0;
       const weatherText = (p.weather && p.weather.phrase) || forecast.weather || "";
+      // Main decision tree
       let tips = [];
       if (temp < 3) tips.push("Very cold today: Dress in layers, take gloves/beanie, and allow extra time to defrost car windows.");
       else if (temp < 8) tips.push("Chilly morning—layer up, especially for school runs or early starts.");
@@ -147,14 +201,19 @@
       else if (wind > 15) tips.push("Breezy: Mind loose items and avoid light fires outdoors.");
       if (weatherText.toLowerCase().includes("fog")) tips.push("Foggy: Drive with headlights (not just parkers), and watch for reduced visibility.");
       if (weatherText.toLowerCase().includes("frost")) tips.push("Frost risk: Check driveways and paths before walking.");
+      // Seasonal/special
       if (season === "Winter" && temp < 10 && hour < 9) tips.push("Black ice possible—take care on rural roads.");
       if (season === "Summer" && temp > 22) tips.push("High UV: Extra sunscreen and sunglasses needed, even in cloud.");
+      // Daily time-based
       if (hour < 9 && rain < 1) tips.push("Early start: Roads may be dewy or slippery.");
       if (hour > 19 && temp < 12) tips.push("Cool evening: Plan to be home before dark or pack a warm jacket.");
+      // Always include at least one generic NZ tip if not enough tips
       if (tips.length === 0) tips.push("Day looks pretty settled: Good for most outdoor plans.");
+      // Only 1–2 tips max, but always practical
       return tips.slice(0,2).join("<br>");
     }
-    // ==== LEARNING ENGINE ====
+
+    // ==== LEARNING ENGINE: Log forecast vs. actual, backend-ready ====
     function logForecastCorrection(forecast, actual) {
       try {
         const f = forecast.maxTempC, a = (actual.periods[0].temp && actual.periods[0].temp.avgC);
@@ -167,65 +226,40 @@
         }
       } catch {}
     }
+
     // === FISHING / SWELL RECOMMENDATIONS ===
     async function renderFishingPanel() {
       const panel = document.getElementById('fishingPanel');
       panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">Loading latest...</div>';
       try {
-        // 1. Fetch Open-Meteo marine for Thames
-        const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${thamesLat}&longitude=${thamesLon}&hourly=wave_height,wave_direction,wave_period,wind_speed_10m,wind_direction_10m,water_temperature&timezone=Pacific%2FAuckland`;
-        const marineRes = await fetch(marineUrl);
-        const marine = await marineRes.json();
-        // 2. Fetch "actuals" from Coromandel Town station (xweather)
-        const coromandelSummaryRes = await fetch(getSummaryUrl(coroWeatherStationId));
-        const coromandelSummary = await coromandelSummaryRes.json();
-        if (!marine.hourly || !coromandelSummary.success) throw new Error("No marine or weather data");
-        // Find current hour for both
-        const now = new Date();
-        const localHour = now.getHours();
-        // Marine time slots
-        let hidx = 0;
-        for (let i = 0; i < marine.hourly.time.length; ++i) {
-          if (new Date(marine.hourly.time[i]).getHours() === localHour) { hidx = i; break; }
-        }
-        // Compose advice
-        const wvHt = marine.hourly.wave_height[hidx];
-        const wvPrd = marine.hourly.wave_period[hidx];
-        const wvDir = marine.hourly.wave_direction[hidx];
-        const wndSpd = marine.hourly.wind_speed_10m[hidx];
-        const wndDir = marine.hourly.wind_direction_10m[hidx];
-        const watTmp = marine.hourly.water_temperature ? marine.hourly.water_temperature[hidx] : null;
-        const actualNow = coromandelSummary.response[0].periods[0];
-        // Decision logic
+        const res = await fetch(getForecastsUrl(fishingStationId));
+        const js = await res.json();
+        if (!js.success) throw new Error("No fishing station data");
+        const today = js.response[0].periods[0];
+        // Simple fishing model:
+        // Go/No-Go based on wind (<15 km/h ideal), rain (<2mm best), temp (12–25°C), weather type
+        let best = (today.windSpeedMaxKPH <= 15 && today.precipMM <= 2 && today.maxTempC >= 12 && today.maxTempC <= 25);
+        let decent = (today.windSpeedMaxKPH <= 22 && today.precipMM <= 4);
         let tips = [];
-        // Safety: wave height
-        if (wvHt > 2) tips.push("⚠️ Swell is high today (>2m): only experienced boaties/fishers should head out, stick close to shore.");
-        else if (wvHt > 1.2) tips.push("🌊 Moderate swell (1.2–2m): Inshore fishing may be okay, but expect some chop offshore.");
-        else tips.push("🟢 Low swell (<1.2m): Smooth conditions for inshore fishing and launching small boats/kayaks.");
-        // Wind
-        if (wndSpd > 25) tips.push("⚠️ Strong winds: Expect rough water. Best to fish from the beach or sheltered bays.");
-        else if (wndSpd > 15) tips.push("💨 Gusty winds: Drifting may be difficult; fish close to land or try sheltered corners.");
-        else tips.push("🪁 Light winds: Excellent boating/fishing conditions.");
-        // Water temp
-        if (watTmp) {
-          if (watTmp > 19) tips.push(`🐟 Warm water (${watTmp.toFixed(1)}°C): Snapper and kingfish more active in shallows.`);
-          else if (watTmp > 15) tips.push(`🐟 Good water temp (${watTmp.toFixed(1)}°C): Gurnard, trevally likely. Try softbaits.`);
-          else tips.push(`🐟 Cooler water (${watTmp.toFixed(1)}°C): Fish deeper or try bait and berley.`);
+        if (best) {
+          tips.push("Great fishing day! Inshore conditions are ideal. Swell and wind are low, and weather looks settled.");
+        } else if (decent) {
+          tips.push("Fishing should be fair, but watch wind gusts and patchy rain. Early mornings or late arvos may be better.");
+        } else {
+          tips.push("Not ideal for boating/fishing: wind or rain may make it rough offshore. Try a sheltered bay or estuary.");
         }
-        // Actual conditions (live wind/temp from station)
-        tips.push(`<b>Current at Coromandel:</b> ${actualNow.temp.avgC != null ? `${actualNow.temp.avgC.toFixed(1)}°C` : '—'}<br>Wind: ${actualNow.windSpeed.avgKPH != null ? `${actualNow.windSpeed.avgKPH.toFixed(1)} km/h` : '—'}<br>Humidity: ${actualNow.humidity.avg != null ? Math.round(actualNow.humidity.avg)+'%' : '—'}`);
-        // General tips
-        if (wvPrd > 8 && wvHt < 1.2) tips.push("⏳ Long wave period and low swell = glassy conditions, fish are often closer inshore.");
-        if (wndDir > 180 && wndDir < 270) tips.push("⬅️ Westerly wind: Try eastern faces, close to rocks, for snapper or kahawai.");
-        if (wvHt < 1.2 && wndSpd < 12) tips.push("💡 Best bet: Drift softbaits or slowjigs across sand, or fish berley trails off reefs.");
-        // Local know-how
-        tips.push("🎣 Early morning or late arvo is usually most productive on the Coro coast.");
-        // Compose HTML
-        panel.innerHTML = `<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">${tips.join('<br>')}</div>`;
+        // Add forecasted weather
+        tips.push(`Today's forecast for Coromandel: <b>${today.weather}</b>, <b>High: ${today.maxTempC}°C</b>, Wind max: <b>${today.windSpeedMaxKPH} km/h</b>, Rain: <b>${today.precipMM} mm</b>.`);
+        // Add general tip
+        if (today.windSpeedMaxKPH > 18) tips.push("Tip: Snapper and gurnard are often deeper in windy/swirly water. Berley up.");
+        else if (today.precipMM > 2) tips.push("Tip: After rain, fish closer to river mouths for kahawai and kingfish.");
+        else tips.push("Tip: Early incoming tide often fishes best on the Coromandel east coast.");
+        panel.innerHTML = `<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">${tips.join("<br>")}</div>`;
       } catch(e) {
-        panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips" style="color:#ba2a19;">Couldn’t load marine data. Try again soon.</div>';
+        panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips" style="color:#ba2a19;">Couldn’t load fishing data. Try again soon.</div>';
       }
     }
+
     // --- Date helpers ---
     function formatDay(dateISO) {
       const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -236,6 +270,7 @@
       const d = new Date(dateISO);
       return d.toLocaleDateString("en-NZ", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
     }
+
     // =========== MAIN LOAD ============
     async function loadWeatherApp() {
       document.getElementById('loader').style.display = 'block';
@@ -248,6 +283,7 @@
         const forecastData = await foreRes.json();
         const summaryData = await sumRes.json();
         if (!forecastData.success || !summaryData.success) throw new Error('API Error');
+        // LEARNING: log for backend, not UI
         logForecastCorrection(forecastData.response[0].periods[0], summaryData.response[0]);
         renderCurrent(summaryData.response[0], forecastData.response[0].periods[0]);
         renderAdvice(summaryData.response[0], forecastData.response[0].periods[0]);
@@ -261,6 +297,7 @@
         console.error(e);
       }
     }
+
     function renderCurrent(actual, todayForecast) {
       const p = actual.periods[0];
       let iconUrl = getIconUrl(p) || getIconUrl(todayForecast);
