@@ -94,6 +94,7 @@
     const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
     const wuStationId = "IPAERO15";
     const wuApiKey = "17815bdf5f234a62815bdf5f239a6209";
+
     function getCondUrl(station) {
       return `https://data.api.xweather.com/conditions/${station}?format=json&plimit=1&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
@@ -106,80 +107,18 @@
       const start = new Date(now.getTime()-1000*60*60*48).toISOString().slice(0,10);
       return `https://data.api.xweather.com/observations/${station}?from=${start}&to=${end}&fields=periods.dateTimeISO,periods.precipMM&plimit=288&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
-    function mapWUIconToTwemoji(condition) {
-      const c = condition.toLowerCase();
-      if (c.includes('sun') || c.includes('clear')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
-      if (c.includes('cloud') && c.includes('sun')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
-      if (c.includes('cloud')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
-      if (c.includes('showers') || c.includes('rain')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f327.png";
-      if (c.includes('snow')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2744.png";
-      if (c.includes('thunder')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
-      return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
-    }
-    // Main load function
-    async function loadWeatherApp() {
-      document.getElementById('loader').style.display = 'block';
-      document.getElementById('mainContent').style.display = 'none';
-      try {
-        // Get Weather Underground current conditions (via CORS proxy)
-        let wuCurrent;
-        try {
-          const wuRes = await fetch(
-            "https://corsproxy.io/?" + encodeURIComponent(
-              `https://api.weather.com/v2/pws/observations/current?stationId=${wuStationId}&format=json&units=m&apiKey=${wuApiKey}`
-            )
-          );
-          const wuJson = await wuRes.json();
-          wuCurrent = wuJson.observations[0];
-        } catch (e) {
-          wuCurrent = null;
-        }
-        // Get forecast from XWeather
-        const fcRes = await fetch(getForecastsUrl(stationId));
-        const fcData = await fcRes.json();
-        if (!fcData.success) throw new Error('Forecast API Error');
 
-        renderCurrentWU(wuCurrent, fcData.response[0].periods[0]);
-        renderAdvice({
-          tempC: wuCurrent?.metric?.temp,
-          humidity: wuCurrent?.humidity,
-          windSpeedKPH: wuCurrent?.metric?.windSpeed,
-          precipMM: wuCurrent?.metric?.precipTotal,
-          weather: wuCurrent?.imperial?.qualifier || wuCurrent?.icon || ""
-        }, fcData.response[0].periods[0]);
-        renderForecasts(fcData.response[0].periods);
-        await renderRainPanel(stationId, fcData.response[0].periods);
-        await renderFishingPanel();
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('mainContent').style.display = '';
-      } catch (e) {
-        document.getElementById('loader').innerHTML = "Couldn’t load weather data. Try again soon.";
-        console.error(e);
-      }
-    }
-    // Use WU data for current conditions
-    function renderCurrentWU(wu, todayForecast) {
-      let condText = (wu && wu.imperial && wu.imperial.qualifier) || (wu && wu.icon) || '—';
-      let iconUrl = mapWUIconToTwemoji(condText);
-      document.getElementById('currentBlock').innerHTML = `
-        <img class="current-icon" src="${iconUrl}" alt="icon"/>
-        <div class="current-details">
-          <div class="current-temp">${(wu && wu.metric && wu.metric.temp != null) ? wu.metric.temp.toFixed(1) + "°C" : "—"}</div>
-          <div class="feelslike">Feels like: ${(wu && wu.metric && wu.metric.heatIndex != null) ? wu.metric.heatIndex.toFixed(1) + "°C" : ((wu && wu.metric && wu.metric.temp != null) ? wu.metric.temp.toFixed(1) + "°C" : "—")}</div>
-          <div class="current-weather-text">${condText}</div>
-          <div class="current-extra">
-            Rain: ${(wu && wu.metric && wu.metric.precipTotal != null) ? wu.metric.precipTotal.toFixed(1) : "—"} mm |
-            Humidity: ${(wu && wu.humidity != null) ? Math.round(wu.humidity) : "—"}% |
-            Wind: ${(wu && wu.metric && wu.metric.windSpeed != null) ? wu.metric.windSpeed.toFixed(1) : "—"} km/h${(wu && wu.metric && wu.metric.windGust != null) ? ` (gust ${wu.metric.windGust.toFixed(1)} km/h)` : ""}
-          </div>
-        </div>
-      `;
-    }
-    // Your getIconUrl and other functions unchanged
+    // --- Use this icon logic for current box and cards ---
     function getIconUrl(period) {
-      let icon = period.icon || (period.weather && period.weather.icon);
-      if (icon) return `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
-      const phrase = (period.weather && period.weather.phrase) || period.weather || '';
+      // Support string, or full period object
+      let phrase = "";
+      if (typeof period === "string") {
+        phrase = period;
+      } else {
+        let icon = period.icon || (period.weather && period.weather.icon);
+        if (icon) return `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
+        phrase = (period.weather && period.weather.phrase) || period.weather || '';
+      }
       if (phrase.includes('Sunny')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
       if (phrase.includes('Clear')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
       if (phrase.includes('Cloudy')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
@@ -188,6 +127,8 @@
       if (phrase.includes('Thunder')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
       return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
     }
+
+    // --- Practical advice engine unchanged ---
     function getPracticalAdvice(actual, forecast) {
       const d = new Date();
       const month = d.getMonth() + 1;
@@ -196,6 +137,7 @@
                      : (month >= 3 && month <= 5) ? 'Autumn'
                      : (month >= 6 && month <= 8) ? 'Winter'
                      : 'Spring';
+      // Data extraction
       const p = actual;
       const temp = (p.tempC != null) ? p.tempC : forecast.maxTempC;
       const humidity = (p.humidity != null) ? p.humidity : forecast.maxHumidity;
@@ -220,9 +162,67 @@
       if (tips.length === 0) tips.push("Day looks pretty settled: Good for most outdoor plans.");
       return tips.slice(0,2).join("<br>");
     }
-    function renderAdvice(p, todayForecast) {
-      document.getElementById('adviceBlock').innerHTML = getPracticalAdvice(p, todayForecast);
+
+    // --- MAIN LOAD FUNCTION ---
+    async function loadWeatherApp() {
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('mainContent').style.display = 'none';
+      try {
+        // Get current LIVE conditions from Weather Underground for current box
+        // Forecasts, rain and fishing still use xweather
+        const [wuCondRes, fcRes] = await Promise.all([
+          fetch(`https://api.weather.com/v2/pws/observations/current?stationId=${wuStationId}&format=json&units=m&apiKey=${wuApiKey}`),
+          fetch(getForecastsUrl(stationId))
+        ]);
+        const wuCondData = await wuCondRes.json();
+        const fcData = await fcRes.json();
+
+        // Parse WU current obs
+        const obs = wuCondData.observations && wuCondData.observations[0];
+        const currentData = obs
+          ? {
+              tempC: obs.metric.temp,
+              feelslikeC: obs.metric.heatIndex !== null ? obs.metric.heatIndex : obs.metric.temp,
+              weather: obs.imperial.wx_phrase || obs.metric.wx_phrase || obs.wx_phrase || "",
+              precipMM: obs.metric.precipRate !== undefined ? obs.metric.precipRate : (obs.metric.precipTotal || 0),
+              humidity: obs.humidity,
+              windSpeedKPH: obs.metric.windSpeed,
+              windGustKPH: obs.metric.windGust,
+            }
+          : {};
+
+        renderCurrentWU(currentData);
+        renderAdvice(currentData, fcData.response[0].periods[0]);
+        renderForecasts(fcData.response[0].periods);
+        await renderRainPanel(stationId, fcData.response[0].periods);
+        await renderFishingPanel();
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('mainContent').style.display = '';
+      } catch (e) {
+        document.getElementById('loader').innerHTML = "Couldn’t load weather data. Try again soon.";
+        console.error(e);
+      }
     }
+
+    // --- CURRENT BOX DRAW, ICON FROM getIconUrl(logic) on weather string ---
+    function renderCurrentWU(p) {
+      let iconUrl = getIconUrl(p.weather || "");
+      document.getElementById('currentBlock').innerHTML = `
+        <img class="current-icon" src="${iconUrl}" alt="icon"/>
+        <div class="current-details">
+          <div class="current-temp">${(p.tempC != null) ? p.tempC.toFixed(1) + "°C" : "—"}</div>
+          <div class="feelslike">Feels like: ${(p.feelslikeC != null) ? p.feelslikeC.toFixed(1) + "°C" : "—"}</div>
+          <div class="current-weather-text">${p.weather || ""}</div>
+          <div class="current-extra">
+            Rain: ${(p.precipMM != null) ? p.precipMM.toFixed(1) : "—"} mm |
+            Humidity: ${(p.humidity != null) ? Math.round(p.humidity) : "—"}% |
+            Wind: ${(p.windSpeedKPH != null) ? p.windSpeedKPH.toFixed(1) : "—"} km/h${(p.windGustKPH != null ? ` (gust ${p.windGustKPH.toFixed(1)} km/h)` : "")}
+          </div>
+        </div>
+      `;
+    }
+
+    // --- REMAINDER: unchanged, still uses your forecast icon logic etc ---
     function renderForecasts(periods) {
       const row = document.getElementById('forecastRow');
       row.innerHTML = '';
@@ -280,6 +280,8 @@
       const d = new Date(dateISO);
       return d.toLocaleDateString("en-NZ", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
     }
+
+    // --- Rain & Fishing unchanged ---
     async function renderRainPanel(stationId, forecastPeriods) {
       let rainToday = 0, rainYesterday = 0, rain7 = 0, rain30 = 0, rainYTD = 0;
       try {
@@ -305,7 +307,7 @@
           rain30 += per.precipMM;
           rainYTD += per.precipMM;
         });
-        rainYTD = 856 + rain7; // fallback
+        rainYTD = 856 + rain7;
       }
       document.getElementById('rainPanel').innerHTML = `
         <span class="rain-label">Rainfall Totals</span><br>
@@ -340,6 +342,7 @@
         panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips" style="color:#ba2a19;">Couldn’t load live data. Try again soon.</div>';
       }
     }
+    // ---- Initial load ----
     window.onload = loadWeatherApp;
   </script>
 </body>
