@@ -225,7 +225,6 @@
         const wuJson = await wuRes.json();
         // Defensive: field existence
         const obs = (wuJson && wuJson.observations && wuJson.observations[0]) || {};
-        // Flatten WU fields to match usage below
         const currentData = {
           temp: obs.metric ? obs.metric.temp : null,
           feelslike: obs.metric ? obs.metric.heatIndex : null,
@@ -254,7 +253,7 @@
     }
 
     function renderCurrentWU(p, todayForecast) {
-      let iconUrl = getIconUrl(p.weather);
+      let iconUrl = getIconUrl(p.weather || todayForecast.weather);
       document.getElementById('currentBlock').innerHTML = `
         <img class="current-icon" src="${iconUrl}" alt="icon"/>
         <div class="current-details">
@@ -335,7 +334,7 @@
       return d.toLocaleDateString("en-NZ", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
     }
 
-    // Rainfall panel using observations
+    // Rainfall/fishing panels unchanged from before
     async function renderRainPanel(stationId, forecastPeriods) {
       let rainToday = 0, rainYesterday = 0, rain7 = 0, rain30 = 0, rainYTD = 0;
       try {
@@ -375,7 +374,6 @@
       `;
     }
 
-    // Fishing panel: Use live actuals from Coromandel Town
     async function renderFishingPanel() {
       const panel = document.getElementById('fishingPanel');
       panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">Loading latest...</div>';
