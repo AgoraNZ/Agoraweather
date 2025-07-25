@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="description" content="The only weather app built on real NZ station data with uniquely Kiwi weather advice."/>
   <style>
-    /* Your CSS unchanged */
+    /* --- Unchanged CSS from your version --- */
     body {
       margin: 0; padding: 0;
       background: #f4f7fb;
@@ -215,34 +215,35 @@
       return tips.slice(0,2).join("<br>");
     }
 
-    // Main load function – uses WU for current, xweather for all else
+    // --- MAIN LOAD ---
     async function loadWeatherApp() {
       document.getElementById('loader').style.display = 'block';
       document.getElementById('mainContent').style.display = 'none';
       try {
-        // Get current LIVE from WU
-        const curRes = await fetch(getCondUrlWU(wuStationId));
-        const curData = await curRes.json();
-        let obs = curData && curData.observations && curData.observations[0];
-
-        // Map to expected fields for advice etc.
-        let currentObs = {
-          temp: obs?.metric?.temp,
-          feelslike: obs?.metric?.heatIndex, // WU uses heatIndex, or windChill if cold
-          humidity: obs?.humidity,
-          windSpeed: obs?.metric?.windSpeed,
-          precip: obs?.metric?.precipRate,
-          weather: obs?.obsDesc || obs?.softwareType || '—',
+        // 1. WU current
+        const wuRes = await fetch(getCondUrlWU(wuStationId));
+        const wuJson = await wuRes.json();
+        // Defensive: field existence
+        const obs = (wuJson && wuJson.observations && wuJson.observations[0]) || {};
+        // Flatten WU fields to match usage below
+        const currentData = {
+          temp: obs.metric ? obs.metric.temp : null,
+          feelslike: obs.metric ? obs.metric.heatIndex : null,
+          humidity: obs.humidity,
+          windSpeed: obs.windSpeed,
+          precip: obs.metric ? obs.metric.precipRate : null,
+          weather: obs.wxPhraseLong || obs.icon,
         };
 
-        // Get forecast, rain, fishing from xweather
+        // 2. xweather forecast/etc
         const fcRes = await fetch(getForecastsUrl(stationId));
-        const fcData = await fcRes.json();
+        const fcJson = await fcRes.json();
+        if (!fcJson.success) throw new Error('No forecast data');
 
-        renderCurrentWU(currentObs); // use our new WU render
-        renderAdvice(currentObs, fcData.response[0].periods[0]);
-        renderForecasts(fcData.response[0].periods);
-        await renderRainPanel(stationId, fcData.response[0].periods);
+        renderCurrentWU(currentData, fcJson.response[0].periods[0]);
+        renderAdvice(currentData, fcJson.response[0].periods[0]);
+        renderForecasts(fcJson.response[0].periods);
+        await renderRainPanel(stationId, fcJson.response[0].periods);
         await renderFishingPanel();
         document.getElementById('loader').style.display = 'none';
         document.getElementById('mainContent').style.display = '';
@@ -252,24 +253,25 @@
       }
     }
 
-    function renderCurrentWU(p) {
+    function renderCurrentWU(p, todayForecast) {
       let iconUrl = getIconUrl(p.weather);
       document.getElementById('currentBlock').innerHTML = `
         <img class="current-icon" src="${iconUrl}" alt="icon"/>
         <div class="current-details">
-          <div class="current-temp">${(typeof p.temp === "number") ? p.temp.toFixed(1) + "°C" : "—"}</div>
-          <div class="feelslike">Feels like: ${(typeof p.feelslike === "number") ? p.feelslike.toFixed(1) + "°C" : "—"}</div>
-          <div class="current-weather-text">${capitalize(p.weather)}</div>
+          <div class="current-temp">${(p.temp != null) ? Number(p.temp).toFixed(1) + "°C" : "—"}</div>
+          <div class="feelslike">Feels like: ${(p.feelslike != null) ? Number(p.feelslike).toFixed(1) + "°C" : "—"}</div>
+          <div class="current-weather-text">${capitalize(p.weather || todayForecast.weather)}</div>
           <div class="current-extra">
-            Rain: ${(typeof p.precip === "number") ? p.precip.toFixed(1) : "—"} mm |
-            Humidity: ${(typeof p.humidity === "number") ? Math.round(p.humidity) : "—"}% |
-            Wind: ${(typeof p.windSpeed === "number") ? p.windSpeed.toFixed(1) : "—"} km/h
+            Rain: ${(p.precip != null) ? Number(p.precip).toFixed(1) : "—"} mm |
+            Humidity: ${(p.humidity != null) ? Math.round(p.humidity) : "—"}% |
+            Wind: ${(p.windSpeed != null) ? Number(p.windSpeed).toFixed(1) : "—"} km/h
           </div>
         </div>
       `;
     }
 
-    // ... rest (forecast, modal, rain, fishing) is unchanged ...
+    // --- The rest remains unchanged ---
+
     function renderAdvice(p, todayForecast) {
       document.getElementById('adviceBlock').innerHTML = getPracticalAdvice(p, todayForecast);
     }
@@ -332,7 +334,8 @@
       const d = new Date(dateISO);
       return d.toLocaleDateString("en-NZ", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
     }
-    // Rain and fishing panels unchanged from previous version...
+
+    // Rainfall panel using observations
     async function renderRainPanel(stationId, forecastPeriods) {
       let rainToday = 0, rainYesterday = 0, rain7 = 0, rain30 = 0, rainYTD = 0;
       try {
@@ -371,6 +374,8 @@
         <span style="font-size:0.98em;opacity:0.66;">*Rainfall uses live station history if available.</span>
       `;
     }
+
+    // Fishing panel: Use live actuals from Coromandel Town
     async function renderFishingPanel() {
       const panel = document.getElementById('fishingPanel');
       panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">Loading latest...</div>';
@@ -394,6 +399,7 @@
       }
     }
 
+    // Initial load
     window.onload = loadWeatherApp;
   </script>
 </body>
