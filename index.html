@@ -87,6 +87,16 @@
       box-shadow: 0 2px 8px #c8e6ff40; font-size: 1.03rem; line-height: 1.35em;
     }
     .rain-label { font-weight: 600; color: #18558e; margin-bottom: 3px; font-size: 1.08rem;}
+    /* FISHING SECTION */
+    .fishing-panel {
+      margin: 25px 18px 0 18px; padding: 14px 14px 12px 14px;
+      border-radius: 12px; background: #eafaf7;
+      box-shadow: 0 2px 7px #bceadd33;
+      color: #18558e; font-size: 1.12rem; font-weight: 500;
+      min-height: 50px;
+    }
+    .fish-headline { font-size: 1.18rem; font-weight: bold; margin-bottom: 6px;}
+    .fish-tips { font-size: 1.04rem; margin-top: 7px; color: #217b6a; }
     @media (max-width: 600px) { .app-container { box-shadow: none; border-radius: 0;} .forecast-row { padding-left: 3px;}
       .modal-popup { border-radius: 21px 21px 0 0; padding: 11px 6px 17px 7px;} }
     .loader {
@@ -102,7 +112,7 @@
   <div class="app-container">
     <header>
       <div class="main-title">Agora NZ Weather</div>
-      <div class="sub-title">The only NZ weather app with real station data &amp; uniquely Kiwi advice</div>
+      <div class="sub-title">The only NZ weather app with real station data &amp; truly practical Kiwi advice</div>
       <div class="station-select-row">
         <label for="stationSelect">Station:</label>
         <select id="stationSelect" disabled>
@@ -124,6 +134,9 @@
       <section>
         <div class="rain-panel" id="rainPanel"></div>
       </section>
+      <section>
+        <div class="fishing-panel" id="fishingPanel"></div>
+      </section>
     </div>
     <div id="modalBg" class="modal-bg" style="display:none;">
       <div class="modal-popup" id="modalPopup"></div>
@@ -136,8 +149,10 @@
   <script>
     // ====== CONFIG ======
     const stationId = "pws_paeroa";
+    const fishingStationId = "pws_COROMANDELTOWN1";
     const apiClientId = "U8feQfLlcEfcXDfsWZs4C";
     const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+
     function getForecastsUrl(station) {
       return `https://data.api.xweather.com/forecasts/${station}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.icon,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.minFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
@@ -147,10 +162,7 @@
     // ICON LOGIC: prefer period.icon, else weather.icon, else map
     function getIconUrl(period) {
       let icon = period.icon || (period.weather && period.weather.icon);
-      if (icon) {
-        // Aeris wxblox icon CDN
-        return `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
-      }
+      if (icon) return `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
       const phrase = (period.weather && period.weather.phrase) || period.weather || '';
       if (phrase.includes('Sunny')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
       if (phrase.includes('Clear')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
@@ -160,372 +172,94 @@
       if (phrase.includes('Thunder')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
       return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
     }
-    // ====== NZ ADVICE ENGINE ======
-    // Thousands of unique Kiwi, region-aware, season-aware, quirky and practical lines!
-    function getKiwiAdvice(actual, forecast) {
+
+    // === PRACTICAL ADVICE ENGINE (day prep, not quirky lines) ===
+    function getPracticalAdvice(actual, forecast) {
       const d = new Date();
       const month = d.getMonth() + 1;
       const hour = d.getHours();
-      const weekDay = d.getDay();
       const season = (month === 12 || month <= 2) ? 'Summer'
                      : (month >= 3 && month <= 5) ? 'Autumn'
                      : (month >= 6 && month <= 8) ? 'Winter'
                      : 'Spring';
-      // Data
+      // Data extraction
       const p = actual.periods[0];
       const temp = (p.temp && p.temp.avgC != null) ? p.temp.avgC : forecast.maxTempC;
       const humidity = (p.humidity && p.humidity.avg) || forecast.maxHumidity;
       const wind = (p.windSpeed && p.windSpeed.avgKPH) || forecast.windSpeedMaxKPH;
       const rain = (p.precip && p.precip.totalMM) || forecast.precipMM || 0;
       const weatherText = (p.weather && p.weather.phrase) || forecast.weather || "";
-      // REGIONAL/NZ-QUIRKS database (examples, randomly shuffled per session)
-      const universal = [
-        "Don’t like the weather? Wait five minutes.",
-        "Beaches, bush, or both today—classic Kiwi options.",
-        "If you’re cold, so are your jandals.",
-        "Always take a jacket. Even to bed.",
-        "Time for a yarn about the weather at the dairy.",
-        "Best bring the washing in. Or risk it for the biscuit.",
-        "Another beaut day in Godzone.",
-        "Might be time for a cheeky trip to Mitre 10.",
-        "Perfect weather for a pie at the servo.",
-        "Suns out—BBQ tongs out. Don’t forget the cheese rolls.",
-        "Windy? Hold onto your hat—and your gumboots.",
-        "Cloudy, but could still get sunburnt. Welcome to NZ.",
-        "Not raining yet. Give it ten minutes.",
-        "Perfect day for fish ‘n’ chips on the beach.",
-        "Could be shorts or puffer weather—sometimes both.",
-        "Great day to fix that fence you’ve been ignoring.",
-        "If it’s not a four-seasons-in-one-day, is it even NZ?",
-        "Blue sky for now, but never trust it past 2pm.",
-        "Good luck drying laundry. Tumble drier’s mate.",
-        "If you can see the Coromandel, it’s about to rain. If you can’t, it’s already raining.",
-        "You’re not a true Kiwi until you mow lawns in the rain.",
-        "Perfect afternoon for a L&P in Paeroa.",
-        "Stay sun smart—even on a ‘grey’ day, that UV is sneaky.",
-        "Best to layer up. You’ll need every option before lunch.",
-        "Classic west coast weather—bring the raincoat, just in case.",
-        "Watch for black ice on the Desert Road this time of year.",
-        "Better throw an umbrella in the boot. Or two.",
-        "If you live in Wellington, tie down the trampoline.",
-        "Foggy morning? Keep headlights on. (Not just parkers!)",
-        "First sign of sun? Half the street’s mowing lawns.",
-        "Chilly? Time for a Milo or hot L&P.",
-        "Dry spell? Hose ban must be close.",
-        "Auckland traffic + rain = double your commute.",
-        "When’s the last time you checked the guttering?",
-        "Snow on the hills—should make for good Instagram.",
-        "Puddles are just New Zealand’s way of reminding you about proper boots.",
-        "Another one for the weather diary, eh.",
-        "Windy Wellington or just a regular Thursday?",
-        "Sunshine in the morning, rugby on TV by night. Bliss.",
-        "If your washing’s out, it’ll rain soon. Guaranteed.",
-        "Soggy dog = happy dog (but muddy house).",
-        "Time for a backyard game of cricket—unless it pours.",
-        "BBQ? Only if you’ve got a gazebo handy.",
-        "Bring a jumper for the evening—Kiwis know better.",
-        "No such thing as bad weather, only bad planning.",
-        "That’s not a drizzle—that’s ‘liquid sunshine’.",
-        "Peak New Zealand: shorts, jandals, and a beanie.",
-        "Perfect conditions for a road trip down SH1.",
-        "Great day for a sausage sizzle outside Bunnings.",
-        "If you see a tui, it’s a lucky day.",
-        "Don’t trust the forecast? Neither does anyone else.",
-        "Whanganui fog or Auckland showers? Could be both.",
-        "Got sunscreen? You’ll need it.",
-        "Welcome to ‘Just a bit damp’ season.",
-        "Yes, the wind will ruin your hair.",
-        "Brolly might survive. Might not.",
-        "Another ‘she’ll be right’ kind of day.",
-        "If you hear cicadas, it’s officially summer.",
-        "Duck under awnings. Sudden showers incoming.",
-        "Time for a lamington and a cuppa.",
-        "Day for a walk up Mount Eden. Unless you melt.",
-        "If the dog’s barking, weather’s about to turn.",
-        "Don’t forget your gold coin for the sausage sizzle.",
-        "Weather app says 18°, feels like 13°.",
-        "Find a rugby field. There’s always one nearby.",
-        "Perfect time for a stroll on the beach. Or not.",
-        "Rainy Saturday? Time for board games.",
-        "Any excuse for a drive to the Coromandel.",
-        "Great day for a swim if you don’t mind hypothermia.",
-        "Umbrella required. Gumboots optional.",
-        "Classic Auckland: can’t decide between rain or shine.",
-        "Sun out? It’s probably raining somewhere else.",
-        "Jandals weather... until you step in a puddle.",
-        "Bit of a nippy one—put the kettle on.",
-        "That wind could blow a small car over. Take care.",
-        "No shorts today unless you’re a true southerner.",
-        "Watch out for hail—nature’s way of keeping you awake.",
-        "Every season in an hour, not just a day.",
-        "The ducks are loving it.",
-        "If you can see Rangitoto, nice. If not—rain’s coming.",
-        "Not quite beach weather, unless you’re tough.",
-        "‘Pack a raincoat’ is the unofficial NZ motto.",
-        "Perfect evening for stargazing—or Netflix if it clouds over.",
-        "Don’t trust that rainbow. More showers coming.",
-        "Sunny spells, scattered showers—classic forecast.",
-        "Bring out the puffer jacket. (Never out of season.)",
-        "Wind so strong it’s horizontal rain.",
-        "That’s not fog, that’s ‘mystic morning’.",
-        "Wellington wind socks flying sideways again.",
-        "Northland’s warm, Waikato’s wet, Southland’s frozen.",
-        "Another day, another weather chat with the neighbours.",
-        "Watch out for sudden gusts—especially on the bridge.",
-        "If you’re in Otago, expect four seasons—before lunch.",
-        "Can always count on the East Coast for sunshine.",
-        "Keen for a hike? Pack all the gear, just in case.",
-        "NZ UV index: ‘Just trust us, it’s high’.",
-        "Fish biting? Must be about to rain.",
-        "Rain radar: always something to talk about.",
-        "Day for a trip to Te Papa—indoors is best.",
-        "Check MetService, then look out the window.",
-        "NZ: where you plan for rain, then sun, then rain again.",
-        "That rainbow is a trap. It’ll rain twice more today.",
-        "Classic southerly—don’t bother with an umbrella.",
-        "Not windy yet? Wait ten minutes.",
-        "If you’re in the South Island, put the heat pump on.",
-        "If you’re in the North, get ready for mugginess.",
-        "‘Moist’ is today’s word.",
-        "Surf’s up, so is the wind.",
-        "Windiest city in the world for a reason.",
-        "Coromandel always gets the best of it.",
-        "Better make the most of the sunshine, it won’t last.",
-        "Sheep are sheltering—must be rain on the way.",
-        "Dog’s inside? So should you be.",
-        "Spot the rainbow, dodge the rain.",
-        "Lunch outside? Only if you’re brave.",
-        "Best stick to the boardwalk—grass will be squelchy.",
-        "Cup of tea, bikkie, and watch the weather roll in.",
-        "Bright start, stormy finish. That’s today.",
-        "Don’t trust clear skies in the west.",
-        "Bit breezy. Perfect kite weather.",
-        "Patches of blue, clouds coming soon.",
-        "Open the curtains. That’s your forecast.",
-        "Whatever the weather, there’s always Whittaker’s.",
-        "It’s a ‘rug up’ kind of day.",
-        "Bring a torch for early mornings—still dark out.",
-        "Invercargill? Get your thermals out.",
-        "Warkworth? Might be the only place with sun.",
-        "Kaikoura’s whale watching—if the sea’s not wild.",
-        "Napier’s hot one day, Art Deco the next.",
-        "Rotorua: it’s not the rain, it’s the smell.",
-        "A good day for a ferry trip? Wellington says ‘maybe’.",
-        "Mount Maunganui’s calling, but the tide’s out.",
-        "Grey Lynn drizzle or Ponsonby shine, it’s all Auckland.",
-        "Dunedin’s cold, so what else is new?",
-        "Palmy: more wind than you’d think.",
-        "Whangarei showers, but it’ll clear up. Maybe.",
-        "If it’s July, check the rugby schedule.",
-        "Cromwell fog lifting soon—probably.",
-        "Christchurch nor’wester: everything’s flying.",
-        "Queenstown looks stunning, but bring a jacket.",
-        "Te Anau: could be sunshine, could be snow.",
-        "Gisborne’s first for sun, last for rain.",
-        "Tauranga: good day for the Mount walk.",
-        "Hamilton mist or Hamilton rain. Same same.",
-        "Kerikeri oranges growing fast in this sun.",
-        "Best keep an eye on the Hauraki Gulf clouds.",
-        "Marlborough sun: wine time.",
-        "Taupo wind—good for sailing, not for hats.",
-        "Hokitika drizzle: just the usual.",
-        "Waitomo: all caves, all the time.",
-        "Kaipara: if the harbour’s calm, go fishing.",
-        "Masterton chill in the morning, warm arvo.",
-        "Levin: windbreaks a must.",
-        "Putaruru’s clear today—go see the Blue Spring.",
-        "West Coast rain? Who would’ve thought.",
-        "Gore: keep those gloves handy.",
-        "Auckland: could be muggy. Could be flooding.",
-        "Wellington: hair straighteners work overtime.",
-        "If you see Mount Taranaki, take a photo. Quick.",
-        "Classic Chatham Islands mist.",
-        "Rain in Greymouth? Nothing new.",
-        "Timaru: good ice cream weather (any weather).",
-        "Day for the Otago Rail Trail if you don’t mind wind.",
-        "New Plymouth: surf’s up, umbrella’s out.",
-        "Picton: ferry’s rocking, as always.",
-        "Pukekohe: strawberries ripening nicely.",
-        "Balclutha breeze blowing strong.",
-        "Kaikoura seals sunbathing. Jealous.",
-        "Rotorua geysers not bothered by the drizzle.",
-        "Oamaru penguins still coming home at dusk.",
-        "Tokoroa: forestry scent on the breeze.",
-        "North Shore: likely to see runners out, rain or shine.",
-        "Nelson sun—don’t forget sunscreen.",
-        "Tauranga bridge traffic: always.",
-        "Rangiora: could get all four seasons today.",
-        "Aoraki shrouded in cloud again.",
-        "Fiordland: chance of epic scenery, or epic rain.",
-        "Paeroa: L&P bottle still standing.",
-        "Blenheim: time to check the vines.",
-        "Whakatane: day for White Island spotting.",
-        "Morrinsville cows love this weather.",
-        "Matamata: Hobbiton will be green and lush.",
-        "Kaitaia: maybe go fishing if the wind drops.",
-        "Te Kuiti: sheep probably dry, for now.",
-        "Opotiki: big surf, bigger smiles.",
-        "Greytown: good coffee day.",
-        "Fielding’s farmers market is always worth a visit.",
-        "Ashburton: wind making life interesting.",
-        "Whitianga: big tides today.",
-        "Hastings: apple season nearly here.",
-        "Paraparaumu: watch out for the sand.",
-        "Upper Hutt: start with fog, finish with sun.",
-        "Stratford: great day for mountain views.",
-        "Cambridge: river looks perfect for a walk.",
-        "Huntly: power station clouds matching the weather.",
-        "Waipukurau: warm day, cool breeze.",
-        "Dannevirke: keep an eye on the sheep.",
-        "Taihape: best weather for a gumboot toss.",
-        "Turangi: trout fishing best when it rains.",
-        "Raetihi: mountain air feels crisp.",
-        "Fairlie: if it’s frosty, it’ll be a stunner later.",
-        "Reefton: gold in the river, rain in the sky.",
-        "Kaipoi: high chance of traffic.",
-        "Wairoa: spot the sun, it’s rare.",
-        "Ohakune: carrots won’t mind the chill.",
-        "Invercargill wind will wake you up.",
-        "Hokitika: another wet record broken.",
-        "Waimate: berry season’s on the way.",
-        "Whanganui: river’s full after rain.",
-        "Tawa: best to bike in the morning, before wind picks up.",
-        "Alexandra: always cooler than you expect.",
-        "Ngatea: probably raining.",
-        "Mangawhai: surf’s up if the wind’s right.",
-        "Pukerua Bay: watch for sea spray on the highway.",
-        "Kawerau: sulphur in the air and rain on the ground.",
-        "Bulls: only rain here is on the puns.",
-        "Westport: rain’s on tap.",
-        "Cheviot: great pie day.",
-        "Carterton: morning fog, arvo blue sky.",
-        "Helensville: river looking high.",
-        "Foxton: sand everywhere.",
-        "Taumarunui: perfect for the Forgotten World Highway.",
-        "Paekakariki: salty breeze on the esplanade.",
-        "Dargaville: river’s brown, sky’s blue (for now).",
-        "Turua: another stunner.",
-        "Otorohanga: Kiwis out, tourists in.",
-        "Te Awamutu: grab a pie on the way through.",
-        "Putaruru: Blue Spring always flowing.",
-        "Tokaanu: soak in the hot pools after a chilly day.",
-        "Waitara: surf if you’re keen.",
-        "Ohope: best sand in NZ—unless it rains.",
-        "Te Puke: kiwifruit love this drizzle.",
-        "Katikati: avocado toast, rain or shine.",
-        "Mangere: airport wind socks always flapping.",
-        "Papamoa: always beachy.",
-        "Orewa: fish and chips on the promenade.",
-        "Tirau: corrugated iron sheep not bothered by rain.",
-        "Whangamata: surf and sand, if the weather holds.",
-        "Kerikeri: citrus is happy.",
-        "Matakana: time for a wine tour.",
-        "Arrowtown: leaves turning gold.",
-        "Cromwell: stonefruit ripening.",
-        "Queenstown: probably a perfect day (again).",
-        "Wanaka: good day for SUP on the lake."
-      ];
-      // Seasonal extras
-      const summer = [
-        "Sunscreen, sunnies, and jandals: required kit.",
-        "Cricket on the radio and BBQ in the backyard.",
-        "Perfect day for a jump off the wharf.",
-        "Even the tui are sunbathing.",
-        "Pack a hat for that midday UV.",
-        "Water’s warm enough to brave a swim.",
-        "Remember, UV in NZ is no joke—slap on sunscreen.",
-        "Beaches packed. Find a secret spot."
-      ];
-      const winter = [
-        "Frosty start, toasty finish.",
-        "Soup weather. Cheese rolls optional.",
-        "Extra blanket on the bed tonight.",
-        "Hot chips at the dairy on the way home.",
-        "See your breath? Time for a fire.",
-        "Huddle by the heater. It’s that time.",
-        "No such thing as bad weather, just bad jackets.",
-        "Short days, long puffer coats."
-      ];
-      const spring = [
-        "Daffodils popping up everywhere.",
-        "Lambs in the paddock, rain on the roof.",
-        "Don’t trust the sunshine—showers lurking.",
-        "Birds getting loud early.",
-        "Allergy season: pack tissues.",
-        "Layer up—can be four seasons before lunch.",
-        "Perfect for a picnic—if you dodge the drizzle."
-      ];
-      const autumn = [
-        "Crisp leaves, crisp mornings.",
-        "Best season for tramping.",
-        "Golden hour all day.",
-        "Harvest season—roadside stalls everywhere.",
-        "Foggy starts, sunny arvos.",
-        "Great day for baking with apples.",
-        "Cool but calm—ideal walking weather."
-      ];
-      // Weather-based
-      const heavyRain = [
-        "Buckets out there—could kayak down Queen Street.",
-        "Rain so heavy, even the ducks want inside.",
-        "Best day for gumboots, not jandals.",
-        "Streets look like the Avon River.",
-        "Windshield wipers on turbo mode."
-      ];
-      const strongWind = [
-        "It’s a ‘hang onto your hat’ day.",
-        "Umbrella survival odds: low.",
-        "Bin day—check the street for yours.",
-        "Clouds racing across the sky.",
-        "Flying washing day."
-      ];
-      const coldSnap = [
-        "Brass monkey weather.",
-        "Icicles on the mailbox.",
-        "Even the car won’t start.",
-        "Gloves, beanie, scarf: all required.",
-        "Time to find the electric blanket."
-      ];
-      const foggy = [
-        "Could cut the fog with a knife.",
-        "Watch out for ninja cyclists.",
-        "Car heaters on demist, please.",
-        "Feels like London, but with better coffee.",
-        "Fog horn would be handy."
-      ];
-      // Advice selection logic
-      let picks = [];
-      if (rain > 20) picks.push(...heavyRain);
-      if (wind > 45) picks.push(...strongWind);
-      if (temp < 6) picks.push(...coldSnap);
-      if (weatherText.toLowerCase().includes("fog")) picks.push(...foggy);
-      // Season-specific
-      if (season === "Summer") picks.push(...summer);
-      if (season === "Winter") picks.push(...winter);
-      if (season === "Spring") picks.push(...spring);
-      if (season === "Autumn") picks.push(...autumn);
-      // Always include a few from the universal list
-      picks.push(...universal);
-      // Randomize and pick 2-3 lines
-      function randomPick(arr, n) {
-        let arrCopy = arr.slice();
-        let res = [];
-        for (let i = 0; i < n && arrCopy.length > 0; i++) {
-          let idx = Math.floor(Math.random() * arrCopy.length);
-          res.push(arrCopy.splice(idx, 1)[0]);
-        }
-        return res;
-      }
-      let advices = randomPick(picks, 3);
-      // Add a forecast-vs-actual correction if needed (demo mode)
-      let learnMsg = "";
-      try {
-        const forecasted = forecast.maxTempC;
-        if (forecasted && Math.abs(forecasted - temp) > 3)
-          learnMsg = "<br><span style='color:#c16416;font-size:0.98em;'>[Forecast correction: Actual max temp off by " + (forecasted - temp).toFixed(1) + "°C today.]</span>";
-      } catch {}
-      return advices.join("<br>") + (learnMsg || "");
+      // Main decision tree
+      let tips = [];
+      if (temp < 3) tips.push("Very cold today: Dress in layers, take gloves/beanie, and allow extra time to defrost car windows.");
+      else if (temp < 8) tips.push("Chilly morning—layer up, especially for school runs or early starts.");
+      else if (temp > 25) tips.push("Hot day ahead: Stay hydrated, seek shade, and slip/slop/slap before going out.");
+      if (rain > 15) tips.push("Heavy rain expected: Take waterproofs, check road conditions, and avoid low-lying tracks.");
+      else if (rain > 4) tips.push("Showers likely: Pack a compact umbrella or raincoat.");
+      if (humidity > 90 && temp > 18) tips.push("Feels muggy: Light, breathable clothing is best.");
+      if (wind > 35) tips.push("Windy: Secure outdoor furniture and be careful driving high-sided vehicles.");
+      else if (wind > 15) tips.push("Breezy: Mind loose items and avoid light fires outdoors.");
+      if (weatherText.toLowerCase().includes("fog")) tips.push("Foggy: Drive with headlights (not just parkers), and watch for reduced visibility.");
+      if (weatherText.toLowerCase().includes("frost")) tips.push("Frost risk: Check driveways and paths before walking.");
+      // Seasonal/special
+      if (season === "Winter" && temp < 10 && hour < 9) tips.push("Black ice possible—take care on rural roads.");
+      if (season === "Summer" && temp > 22) tips.push("High UV: Extra sunscreen and sunglasses needed, even in cloud.");
+      // Daily time-based
+      if (hour < 9 && rain < 1) tips.push("Early start: Roads may be dewy or slippery.");
+      if (hour > 19 && temp < 12) tips.push("Cool evening: Plan to be home before dark or pack a warm jacket.");
+      // Always include at least one generic NZ tip if not enough tips
+      if (tips.length === 0) tips.push("Day looks pretty settled: Good for most outdoor plans.");
+      // Only 1–2 tips max, but always practical
+      return tips.slice(0,2).join("<br>");
     }
+
+    // ==== LEARNING ENGINE: Log forecast vs. actual, backend-ready ====
+    function logForecastCorrection(forecast, actual) {
+      try {
+        const f = forecast.maxTempC, a = (actual.periods[0].temp && actual.periods[0].temp.avgC);
+        if (f && a) {
+          const err = (f - a).toFixed(2);
+          let arr = [];
+          try { arr = JSON.parse(localStorage.getItem("fc_accuracy_log") || "[]"); } catch{}
+          arr.push({ date: new Date().toISOString().slice(0,10), forecast: f, actual: a, error: err });
+          localStorage.setItem("fc_accuracy_log", JSON.stringify(arr));
+        }
+      } catch {}
+    }
+
+    // === FISHING / SWELL RECOMMENDATIONS ===
+    async function renderFishingPanel() {
+      const panel = document.getElementById('fishingPanel');
+      panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">Loading latest...</div>';
+      try {
+        const res = await fetch(getForecastsUrl(fishingStationId));
+        const js = await res.json();
+        if (!js.success) throw new Error("No fishing station data");
+        const today = js.response[0].periods[0];
+        // Simple fishing model:
+        // Go/No-Go based on wind (<15 km/h ideal), rain (<2mm best), temp (12–25°C), weather type
+        let best = (today.windSpeedMaxKPH <= 15 && today.precipMM <= 2 && today.maxTempC >= 12 && today.maxTempC <= 25);
+        let decent = (today.windSpeedMaxKPH <= 22 && today.precipMM <= 4);
+        let tips = [];
+        if (best) {
+          tips.push("Great fishing day! Inshore conditions are ideal. Swell and wind are low, and weather looks settled.");
+        } else if (decent) {
+          tips.push("Fishing should be fair, but watch wind gusts and patchy rain. Early mornings or late arvos may be better.");
+        } else {
+          tips.push("Not ideal for boating/fishing: wind or rain may make it rough offshore. Try a sheltered bay or estuary.");
+        }
+        // Add forecasted weather
+        tips.push(`Today's forecast for Coromandel: <b>${today.weather}</b>, <b>High: ${today.maxTempC}°C</b>, Wind max: <b>${today.windSpeedMaxKPH} km/h</b>, Rain: <b>${today.precipMM} mm</b>.`);
+        // Add general tip
+        if (today.windSpeedMaxKPH > 18) tips.push("Tip: Snapper and gurnard are often deeper in windy/swirly water. Berley up.");
+        else if (today.precipMM > 2) tips.push("Tip: After rain, fish closer to river mouths for kahawai and kingfish.");
+        else tips.push("Tip: Early incoming tide often fishes best on the Coromandel east coast.");
+        panel.innerHTML = `<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">${tips.join("<br>")}</div>`;
+      } catch(e) {
+        panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips" style="color:#ba2a19;">Couldn’t load fishing data. Try again soon.</div>';
+      }
+    }
+
     // --- Date helpers ---
     function formatDay(dateISO) {
       const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -536,6 +270,7 @@
       const d = new Date(dateISO);
       return d.toLocaleDateString("en-NZ", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
     }
+
     // =========== MAIN LOAD ============
     async function loadWeatherApp() {
       document.getElementById('loader').style.display = 'block';
@@ -548,10 +283,13 @@
         const forecastData = await foreRes.json();
         const summaryData = await sumRes.json();
         if (!forecastData.success || !summaryData.success) throw new Error('API Error');
+        // LEARNING: log for backend, not UI
+        logForecastCorrection(forecastData.response[0].periods[0], summaryData.response[0]);
         renderCurrent(summaryData.response[0], forecastData.response[0].periods[0]);
         renderAdvice(summaryData.response[0], forecastData.response[0].periods[0]);
         renderForecasts(forecastData.response[0].periods);
         renderRainPanel(summaryData.response[0], forecastData.response[0].periods);
+        await renderFishingPanel();
         document.getElementById('loader').style.display = 'none';
         document.getElementById('mainContent').style.display = '';
       } catch (e) {
@@ -559,6 +297,7 @@
         console.error(e);
       }
     }
+
     function renderCurrent(actual, todayForecast) {
       const p = actual.periods[0];
       let iconUrl = getIconUrl(p) || getIconUrl(todayForecast);
@@ -577,7 +316,7 @@
       `;
     }
     function renderAdvice(actual, todayForecast) {
-      document.getElementById('adviceBlock').innerHTML = getKiwiAdvice(actual, todayForecast);
+      document.getElementById('adviceBlock').innerHTML = getPracticalAdvice(actual, todayForecast);
     }
     function renderForecasts(periods) {
       const row = document.getElementById('forecastRow');
@@ -616,8 +355,8 @@
           Rainfall: ${per.precipMM.toFixed(1)} mm<br>
           Chance of Rain: ${per.pop}%<br>
           <hr>
-          <b>Kiwi Advice:</b><br>
-          <span style="font-size:1.04em;">${getKiwiAdvice(
+          <b>Prepare for today:</b><br>
+          <span style="font-size:1.04em;">${getPracticalAdvice(
             {periods: [{ temp: { avgC: (per.maxTempC + per.minTempC) / 2 }, humidity: { avg: per.maxHumidity }, windSpeed: { avgKPH: per.windSpeedMaxKPH }, precip: { totalMM: per.precipMM }, weather: { phrase: per.weather } }]},
             per
           )}</span>
