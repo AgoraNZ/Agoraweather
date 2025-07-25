@@ -1,40 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Thames Coast Tides (TideSpy Test)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thames Tides via TideSpy API</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family:sans-serif; background:#eafaf7; color:#18558e; padding:18px;}
+    body { font-family: sans-serif; background: #eafaf7; color: #18558e; padding: 18px;}
     .fish-tide { font-size: 1.18em; margin: 20px 0;}
     .error { color: #c13; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>Thames Coast Fishing &amp; Tides</h2>
+  <h2>Thames Coast Tides (Live from TideSpy)</h2>
   <div id="tides" class="fish-tide">Loading tides…</div>
   <script>
-    // Live TideSpy Thames
-    fetch('https://api.tidespy.com/v1/times?loc=thames&days=2', {
+    fetch('https://corsproxy.io/?https://api.tidespy.com/v1/times?loc=thames&days=2', {
       headers: { "x-api-key": "5m6BgsUMZbwYherOSkoFVz7I2cnKA3R8" }
     })
-      .then(r => r.json())
-      .then(data => {
-        if (data && data.tides && Array.isArray(data.tides) && data.tides.length > 0) {
-          let out = '<b>Tides for Thames:</b><ul>';
-          data.tides.forEach(t => {
-            const time = new Date(t.time).toLocaleTimeString("en-NZ", { hour: '2-digit', minute: '2-digit' });
-            out += `<li>${t.type}: <b>${time}</b> (${t.height.toFixed(2)} m)</li>`;
-          });
-          out += '</ul>';
-          document.getElementById('tides').innerHTML = out;
-        } else {
-          document.getElementById('tides').innerHTML = "<span class='error'>No tide data found for Thames (API may have changed).</span>";
-        }
-      })
-      .catch(e => {
-        document.getElementById('tides').innerHTML = "<span class='error'>Could not load Thames tides (check API key or try again later).</span>";
-      });
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.tides && Array.isArray(data.tides) && data.tides.length > 0) {
+        let out = '<b>Tides for Thames:</b><ul>';
+        data.tides.forEach(t => {
+          const time = new Date(t.time).toLocaleTimeString("en-NZ", { hour: '2-digit', minute: '2-digit' });
+          out += `<li>${t.type}: <b>${time}</b> (${t.height.toFixed(2)} m)</li>`;
+        });
+        out += '</ul>';
+        document.getElementById('tides').innerHTML = out;
+      } else {
+        document.getElementById('tides').innerHTML = "<span class='error'>No tide data found for Thames (API may have changed).</span>";
+      }
+    })
+    .catch(e => {
+      document.getElementById('tides').innerHTML = "<span class='error'>Could not load Thames tides (API/CORS error likely).</span>";
+    });
   </script>
 </body>
 </html>
