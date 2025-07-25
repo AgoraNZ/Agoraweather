@@ -149,9 +149,13 @@
   <script>
     // ====== CONFIG ======
     const stationId = "pws_paeroa";
-    const fishingStationId = "pws_COROMANDELTOWN1";
     const apiClientId = "U8feQfLlcEfcXDfsWZs4C";
     const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+
+    // Location for Firth of Thames, near Thames Coast
+    const fishingLat = -36.97;
+    const fishingLon = 175.54;
+    const metoceanKey = "ymhuvUwhAvXgDDXuEaFYh";
 
     function getForecastsUrl(station) {
       return `https://data.api.xweather.com/forecasts/${station}?format=json&filter=day&limit=7&fields=periods.dateTimeISO,periods.icon,loc,periods.maxTempC,periods.minTempC,periods.pop,periods.precipMM,periods.maxHumidity,periods.minHumidity,periods.maxDewpointC,periods.minDewpointC,periods.maxFeelslikeC,periods.minFeelslikeC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.weather&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
@@ -227,36 +231,47 @@
       } catch {}
     }
 
-    // === FISHING / SWELL RECOMMENDATIONS ===
+    // === FISHING / SWELL RECOMMENDATIONS using Metocean ===
     async function renderFishingPanel() {
       const panel = document.getElementById('fishingPanel');
-      panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">Loading latest...</div>';
+      panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">Loading latest marine data…</div>';
       try {
-        const res = await fetch(getForecastsUrl(fishingStationId));
-        const js = await res.json();
-        if (!js.success) throw new Error("No fishing station data");
-        const today = js.response[0].periods[0];
-        // Simple fishing model:
-        // Go/No-Go based on wind (<15 km/h ideal), rain (<2mm best), temp (12–25°C), weather type
-        let best = (today.windSpeedMaxKPH <= 15 && today.precipMM <= 2 && today.maxTempC >= 12 && today.maxTempC <= 25);
-        let decent = (today.windSpeedMaxKPH <= 22 && today.precipMM <= 4);
+        // Metocean API: fetch for Firth of Thames (Thames coast)
+        const metUrl = `https://api.metocean.co.nz/point-forecast?lat=${fishingLat}&lon=${fishingLon}&parameters=waveHeight,wavePeriodSwell,windSpeed10m&apikey=${metoceanKey}`;
+        const mRes = await fetch(metUrl);
+        if (!mRes.ok) throw new Error("No marine data");
+        const mData = await mRes.json();
+
+        // Basic model, get latest period
+        const m = Array.isArray(mData) && mData.length ? mData[0] : mData;
+        // waveHeight, wavePeriodSwell, windSpeed10m
+        let swell = (m.waveHeight && typeof m.waveHeight === 'number') ? m.waveHeight : (m.waveHeight && m.waveHeight[0]);
+        let period = (m.wavePeriodSwell && typeof m.wavePeriodSwell === 'number') ? m.wavePeriodSwell : (m.wavePeriodSwell && m.wavePeriodSwell[0]);
+        let wind = (m.windSpeed10m && typeof m.windSpeed10m === 'number') ? m.windSpeed10m : (m.windSpeed10m && m.windSpeed10m[0]);
+
+        // Default/fallbacks
+        swell = (typeof swell === "number") ? swell : NaN;
+        period = (typeof period === "number") ? period : NaN;
+        wind = (typeof wind === "number") ? wind : NaN;
+
         let tips = [];
-        if (best) {
-          tips.push("Great fishing day! Inshore conditions are ideal. Swell and wind are low, and weather looks settled.");
-        } else if (decent) {
-          tips.push("Fishing should be fair, but watch wind gusts and patchy rain. Early mornings or late arvos may be better.");
+        if (wind <= 15 && swell <= 1.2) {
+          tips.push("🌊 Calm swell & low wind – ideal day for fishing off Thames coast.");
+        } else if (wind <= 22 && swell <= 1.8) {
+          tips.push("Decent fishing conditions – expect some chop. Early start or estuary may be best.");
         } else {
-          tips.push("Not ideal for boating/fishing: wind or rain may make it rough offshore. Try a sheltered bay or estuary.");
+          tips.push("Rough conditions – heavy wind or swell. Consider shore fishing or harbours only.");
         }
-        // Add forecasted weather
-        tips.push(`Today's forecast for Coromandel: <b>${today.weather}</b>, <b>High: ${today.maxTempC}°C</b>, Wind max: <b>${today.windSpeedMaxKPH} km/h</b>, Rain: <b>${today.precipMM} mm</b>.`);
-        // Add general tip
-        if (today.windSpeedMaxKPH > 18) tips.push("Tip: Snapper and gurnard are often deeper in windy/swirly water. Berley up.");
-        else if (today.precipMM > 2) tips.push("Tip: After rain, fish closer to river mouths for kahawai and kingfish.");
-        else tips.push("Tip: Early incoming tide often fishes best on the Coromandel east coast.");
+        tips.push(`Swell: <b>${isNaN(swell) ? "--" : swell.toFixed(1)} m</b> @ <b>${isNaN(period) ? "--" : period.toFixed(1)} s</b>, Wind: <b>${isNaN(wind) ? "--" : Math.round(wind)} km/h</b>`);
+        if (!isNaN(period) && period > 10) {
+          tips.push("Long-period swell – kahawai & kingfish best near rocky points.");
+        }
+        if (!isNaN(swell) && swell > 1.5) {
+          tips.push("High swell – safest fishing close to shore or inside estuaries.");
+        }
         panel.innerHTML = `<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips">${tips.join("<br>")}</div>`;
       } catch(e) {
-        panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips" style="color:#ba2a19;">Couldn’t load fishing data. Try again soon.</div>';
+        panel.innerHTML = '<div class="fish-headline">Coromandel Fishing & Swell</div><div class="fish-tips" style="color:#ba2a19;">Couldn’t load marine data. Try again soon.</div>';
       }
     }
 
