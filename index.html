@@ -222,12 +222,12 @@
         const wuRes = await fetch(getCondUrlWU(wuStationId));
         const wuJson = await wuRes.json();
         const obs = (wuJson && wuJson.observations && wuJson.observations[0]) || {};
-        // Map fields to match your previous expected naming
         const currentData = {
           temp: obs.metric ? obs.metric.temp : null,
           feelslike: obs.metric ? obs.metric.heatIndex : null,
           humidity: obs.humidity,
-          windSpeed: obs.windSpeed,
+          windSpeed: obs.metric ? obs.metric.windSpeed : obs.windSpeed,
+          windGust: obs.metric ? obs.metric.windGust : obs.windGust,
           precip: obs.metric ? obs.metric.precipRate : null,
           weather: obs.wxPhraseLong || obs.icon,
         };
@@ -248,9 +248,15 @@
       }
     }
 
-    // --- Current panel (always use your getIconUrl logic for icon) ---
+    // --- Current panel: WU data, custom icons, wind/gust shown ---
     function renderCurrentWU(p, todayForecast) {
       let iconUrl = getIconUrl({weather: p.weather || todayForecast.weather});
+      let windStr = "—";
+      if (p.windSpeed != null && p.windGust != null) {
+        windStr = `${Number(p.windSpeed).toFixed(1)} km/h (gust ${Number(p.windGust).toFixed(1)} km/h)`;
+      } else if (p.windSpeed != null) {
+        windStr = `${Number(p.windSpeed).toFixed(1)} km/h`;
+      }
       document.getElementById('currentBlock').innerHTML = `
         <img class="current-icon" src="${iconUrl}" alt="icon"/>
         <div class="current-details">
@@ -260,7 +266,7 @@
           <div class="current-extra">
             Rain: ${(p.precip != null) ? Number(p.precip).toFixed(1) : "—"} mm |
             Humidity: ${(p.humidity != null) ? Math.round(p.humidity) : "—"}% |
-            Wind: ${(p.windSpeed != null) ? Number(p.windSpeed).toFixed(1) : "—"} km/h
+            Wind: ${windStr}
           </div>
         </div>
       `;
@@ -328,7 +334,7 @@
       return d.toLocaleDateString("en-NZ", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
     }
 
-    // Rainfall/fishing panels unchanged from your example
+    // Rain/fishing panels unchanged
     async function renderRainPanel(stationId, forecastPeriods) {
       let rainToday = 0, rainYesterday = 0, rain7 = 0, rain30 = 0, rainYTD = 0;
       try {
