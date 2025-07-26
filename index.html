@@ -42,13 +42,12 @@
     .fishing-panel { margin: 25px 18px 0 18px; padding: 14px 14px 12px 14px; border-radius: 12px; background: #eafaf7; box-shadow: 0 2px 7px #bceadd33; color: #18558e; font-size: 1.12rem; font-weight: 500; min-height: 50px;}
     .fish-headline { font-size: 1.18rem; font-weight: bold; margin-bottom: 6px;}
     .fish-tide { margin-bottom: 18px; }
-    .fish-swell { margin: 12px 0; text-align: center; }
-    .fish-swell img { width: 100%; max-width: 330px; border-radius: 6px; box-shadow: 0 2px 12px #2684c222; }
     @media (max-width: 600px) { .app-container { box-shadow: none; border-radius: 0;} .forecast-row { padding-left: 3px;} .modal-popup { border-radius: 21px 21px 0 0; padding: 11px 6px 17px 7px;} }
     .loader { margin: 60px auto 34px auto; border: 7px solid #d7e3f5; border-top: 7px solid #0f82c6; border-radius: 50%; width: 44px; height: 44px; animation: spin 1.05s linear infinite;}
     @keyframes spin { 0% { transform: rotate(0);} 100% { transform: rotate(360deg);} }
     .credit { text-align: center; color: #b4c2d3; font-size: 0.96em; margin: 31px auto 0 auto;}
     .station-select-row label { font-size: 1em; color: #133958;}
+    .tide-img-thumb { max-width:100%; border-radius:10px; margin:0 auto; display:block; }
   </style>
 </head>
 <body>
@@ -112,38 +111,6 @@
     let previousPressures = [];
     let lastRainWU = { today: 0, yesterday: 0 };
 
-    function generateAdvice(period, isToday, rainTotal7, gust, uv, cloud, winddir) {
-      let advice = [];
-      let tMax = period.maxTempC || period.tempC || period.temp || null;
-      let tMin = period.minTempC || null;
-      let pop = period.pop || 0;
-      let rain = period.precipMM || 0;
-      let wind = period.windSpeedMaxKPH || period.windSpeedKPH || period.windSpeed || 0;
-      let todayName = isToday ? "Today" : "";
-
-      if (rain > 10) advice.push("Prepare for heavy rain, localised flooding possible.");
-      else if (rain > 2) advice.push("Rain/showers likely. Keep jackets or umbrellas handy.");
-      else if (pop > 50) advice.push("Chance of showers, check before heading out.");
-
-      if (gust && gust > 40) advice.push("Strong gusts possible—secure outdoor items.");
-      else if (wind > 20) advice.push("Breezy at times—watch loose items.");
-
-      if (tMax >= 27) advice.push("Hot day—sunburn risk and heat stress possible.");
-      else if (tMax >= 22) advice.push("Warm day, sunscreen needed.");
-      else if (tMax < 5) advice.push("Very cold—layer up and watch for ice.");
-      else if (tMax < 13 && tMin !== null && tMin < 5) advice.push("Chilly day, morning frost possible.");
-
-      if (uv && uv >= 7) advice.push("Extreme UV risk, use protection outdoors.");
-
-      if (cloud !== undefined && cloud > 85) advice.push("Cloudy, little sun expected.");
-      else if (cloud < 40) advice.push("Sunny spells likely.");
-
-      if (isToday && rainTotal7 > 40) advice.unshift("Prepare for a wet week—fields may be muddy, streams full.");
-      if (advice.length === 0) advice.push("Settled day, good for outdoor plans.");
-      if (isToday && winddir) advice.push(`Winds mainly from ${degToCardinal(winddir)}.`);
-      return advice.slice(0,3).join(" ");
-    }
-
     async function loadWeatherApp() {
       document.getElementById('loader').style.display = 'block';
       document.getElementById('mainContent').style.display = 'none';
@@ -165,12 +132,12 @@
         const todayFc = forecastDays[0];
 
         // Rain rate logic (current if possible, fallback to today average)
-        let rainRate = null;
-        if (obs.metric?.precipRate !== undefined) {
-          rainRate = obs.metric.precipRate;
-        } else if (todayFc && todayFc.precipMM !== undefined) {
-          rainRate = Number(todayFc.precipMM) / 24;
-        }
+        let rainRate = (obs.metric?.precipRate !== undefined && obs.metric?.precipRate !== null)
+          ? obs.metric.precipRate
+          : (todayFc && todayFc.precipMM !== undefined ? Number(todayFc.precipMM) / 24 : null);
+
+        // Cloud cover logic (always use xweather)
+        let cloudCover = todayFc && todayFc.clouds !== undefined ? todayFc.clouds : (obs.clouds ?? null);
 
         // Current block data
         const currentData = {
@@ -187,7 +154,7 @@
           uv: todayFc.uvIndex || obs.uv || null,
           visibility: todayFc.visibilityKM ?? obs.visibility ?? null,
           solarRadiation: obs.solarRadiation ?? null,
-          clouds: todayFc.clouds !== undefined ? todayFc.clouds : obs.clouds ?? null,
+          clouds: cloudCover,
           sunrise: todayFc.sunriseISO,
           sunset: todayFc.sunsetISO,
           obsEpoch: obs.obsTimeUtc ? new Date(obs.obsTimeUtc).getTime() : Date.now()
@@ -279,7 +246,10 @@
       const row = document.getElementById('forecastRow');
       row.innerHTML = '';
       periods.forEach((per, idx) => {
-        let advice = generateAdvice(per, idx === 0, rain7, per.windSpeedMaxKPH || per.windGust, per.uvIndex, per.clouds, per.windDirMax);
+        let advice = "—";
+        try {
+          advice = generateAdvice(per, idx === 0, rain7, per.windSpeedMaxKPH || per.windGust, per.uvIndex, per.clouds, per.windDirMax);
+        } catch{}
         const card = document.createElement('div');
         card.className = 'forecast-card';
         card.tabIndex = 0;
@@ -384,21 +354,21 @@
       `;
     }
 
-    // --- Fishing panel with embedded live charts
+    // --- Fishing panel with tide chart + fallback
     async function renderFishingPanel() {
       const panel = document.getElementById('fishingPanel');
+      // Try to show a live preview of the MetService tide chart. If not, fallback to a screenshot+link.
       let tideSection = `
         <div class="fish-tide">
-          <div style="font-size:1.14em;color:#1546ac;font-weight:600;">Thames Coast Tide Chart</div>
-          <iframe src="https://www.metservice.com/marine-surf/tides/thames-coast"
-            style="width:100%;min-height:360px;border:0;border-radius:10px;background:#f5fcff;"
-            title="Thames Tide Chart"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            onerror="this.style.display='none';document.getElementById('tide-fallback').style.display='block';"></iframe>
+          <div style="font-size:1.14em;color:#1546ac;font-weight:600;">Firth of Thames Tide Chart</div>
+          <a href="https://www.metservice.com/marine/regions/coromandel/boating/locations/firth-of-thames" target="_blank" rel="noopener">
+            <img src="https://www.metservice.com/sites/default/files/styles/tide_graph/public/tide_graphs/firth_of_thames.png"
+              alt="Firth of Thames Tide Chart"
+              class="tide-img-thumb"
+              onerror="this.style.display='none';document.getElementById('tide-fallback').style.display='block';"/>
+          </a>
           <div id="tide-fallback" style="display:none;margin-top:12px;">
-            <span style="color:#b50;">Couldn’t load tide chart. <a href='https://www.metservice.com/marine-surf/tides/thames-coast' target='_blank'>View on MetService</a></span>
+            <span style="color:#b50;">Couldn’t load tide chart. <a href='https://www.metservice.com/marine/regions/coromandel/boating/locations/firth-of-thames' target='_blank'>View MetService page</a></span>
           </div>
         </div>
       `;
@@ -423,6 +393,40 @@
         <div class="fish-tips">${tips.join('<br>')}</div>
         ${tideSection}${swellSection}
       `;
+    }
+
+    // --- Advice for forecast cards
+    function generateAdvice(period, isToday, rainTotal7, gust, uv, cloud, winddir) {
+      let advice = [];
+      let tMax = period.maxTempC || period.tempC || period.temp || null;
+      let tMin = period.minTempC || null;
+      let pop = period.pop || 0;
+      let rain = period.precipMM || 0;
+      let wind = period.windSpeedMaxKPH || period.windSpeedKPH || period.windSpeed || 0;
+      let summary = (period.weather && typeof period.weather === "string") ? period.weather : "";
+      let todayName = isToday ? "Today" : "";
+
+      if (rain > 10) advice.push("Prepare for heavy rain, localised flooding possible.");
+      else if (rain > 2) advice.push("Rain/showers likely. Keep jackets or umbrellas handy.");
+      else if (pop > 50) advice.push("Chance of showers, check before heading out.");
+
+      if (gust && gust > 40) advice.push("Strong gusts possible—secure outdoor items.");
+      else if (wind > 20) advice.push("Breezy at times—watch loose items.");
+
+      if (tMax >= 27) advice.push("Hot day—sunburn risk and heat stress possible.");
+      else if (tMax >= 22) advice.push("Warm day, sunscreen needed.");
+      else if (tMax < 5) advice.push("Very cold—layer up and watch for ice.");
+      else if (tMax < 13 && tMin !== null && tMin < 5) advice.push("Chilly day, morning frost possible.");
+
+      if (uv && uv >= 7) advice.push("Extreme UV risk, use protection outdoors.");
+
+      if (cloud !== undefined && cloud > 85) advice.push("Cloudy, little sun expected.");
+      else if (cloud < 40) advice.push("Sunny spells likely.");
+
+      if (isToday && rainTotal7 > 40) advice.unshift("Prepare for a wet week—fields may be muddy, streams full.");
+      if (advice.length === 0) advice.push("Settled day, good for outdoor plans.");
+      if (isToday && winddir) advice.push(`Winds mainly from ${degToCardinal(winddir)}.`);
+      return advice.slice(0,3).join(" ");
     }
 
     window.onload = loadWeatherApp;
