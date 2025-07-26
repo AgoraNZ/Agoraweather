@@ -17,13 +17,13 @@
     select:disabled { background: #e7eaf3; color: #888; }
     .current-block { margin: 17px 18px 0 18px; padding: 17px 11px; border-radius: 12px; background: #eaf3fa; box-shadow: 0 2px 8px #cad8e850; display: flex; align-items: flex-start; gap: 18px;}
     .current-icon-wrap { display: flex; flex-direction: column; align-items: center; }
-    .current-icon { width: 72px; height: 72px; object-fit: contain; background: #fff; border-radius: 50%; border: 2.5px solid #18558e; padding: 8px; box-shadow: 0 0 8px #18558e18; }
-    .moon-icon { width: 38px; height: 38px; margin: 10px auto 0 auto; }
-    .moon-label { font-size: 0.95em; color: #444a68; margin-top: 1px; text-align:center;}
+    .current-icon { width: 68px; height: 68px; object-fit: contain; background: #fff; border-radius: 50%; border: 2.5px solid #18558e; padding: 8px; box-shadow: 0 0 8px #18558e18; }
+    .moon-icon { width: 36px; height: 36px; margin: 12px auto 0 auto; }
+    .moon-label { font-size: 0.97em; color: #444a68; margin-top: 2px; text-align:center;}
     .current-details { flex: 1; display: flex; flex-direction: column; }
-    .current-temp-big { font-size: 3.6rem; font-weight: bold; color: #16549b; margin: 4px 0 6px 0; line-height:1; letter-spacing:-1.2px;}
-    .current-grid { display: flex; flex-wrap: wrap; margin-top: 4px; }
-    .current-field { width: 48%; min-width: 146px; font-size: 0.99rem; margin-bottom: 4px; }
+    .current-temp-big { font-size: 3.45rem; font-weight: bold; color: #16549b; margin: 6px 0 7px 0; line-height:1; letter-spacing:-1.2px;}
+    .current-grid { display: flex; flex-wrap: wrap; margin-top: 5px; }
+    .current-field { width: 48%; min-width: 146px; font-size: 1.02rem; margin-bottom: 3px; }
     .current-label { font-weight: bold; color: #19558e; }
     .advice-block { margin: 17px 18px 0 18px; padding: 13px 15px; border-radius: 10px; background: #e5f2ff; color: #1e364a; font-size: 1.10rem; font-weight: 500; box-shadow: 0 2px 8px #c8e6ff55; min-height: 58px;}
     .forecast-row { margin: 18px 0 0 0; padding-left: 14px; display: flex; overflow-x: auto; gap: 9px; scrollbar-width: thin;}
@@ -92,25 +92,15 @@
     const sunmoon_to = `${pad(now.getMonth()+1)}/${pad(now.getDate()+1)}/${now.getFullYear()}`;
     const MOON_URL = `https://data.api.xweather.com/sunmoon/pws_paeroa?from=${sunmoon_from}&to=${sunmoon_to}&format=json&fields=dateTimeISO,timestamp,profile,loc,place,sun,moon&client_id=${client_id}&client_secret=${client_secret}`;
     const tideImgUrl = "https://www.metservice.com/publicData/webdata/marine/boating/tidegraphs/Firth-of-Thames.png";
-
-    // --- Moon icons by phase
     const moonIcons = {
-      "new moon": "🌑",
-      "waxing crescent": "🌒",
-      "first quarter": "🌓",
-      "waxing gibbous": "🌔",
-      "full moon": "🌕",
-      "waning gibbous": "🌖",
-      "last quarter": "🌗",
-      "waning crescent": "🌘"
+      "new moon": "🌑", "waxing crescent": "🌒", "first quarter": "🌓", "waxing gibbous": "🌔",
+      "full moon": "🌕", "waning gibbous": "🌖", "last quarter": "🌗", "waning crescent": "🌘"
     };
-
     function degToCardinal(deg) {
       if (!deg || isNaN(deg)) return "";
       const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
       return dirs[Math.round(((deg % 360) / 45)) % 8];
     }
-
     async function loadWeatherApp() {
       document.getElementById('loader').style.display = 'block';
       document.getElementById('mainContent').style.display = 'none';
@@ -122,25 +112,22 @@
           fetch(MOON_URL).then(r=>r.json())
         ]);
         let cur = (curRes && curRes.response && curRes.response[0] && curRes.response[0].periods && curRes.response[0].periods[0]) || {};
-        let curLoc = curRes.response && curRes.response[0] && curRes.response[0].loc ? curRes.response[0].loc : {};
         let moonToday = moonRes.response && moonRes.response[0] ? moonRes.response[0] : {};
         let phraseObj = phrRes.response && phrRes.response[0] && phrRes.response[0].phrases ? phrRes.response[0].phrases : {};
         let forecastPeriods = (fcRes && fcRes.response && fcRes.response[0] && fcRes.response[0].periods) || [];
-
-        renderCurrentBox(cur, curLoc, moonToday);
+        renderCurrentBox(cur, moonToday);
         renderAdvice(phraseObj, moonToday);
         renderForecasts(forecastPeriods);
         renderRainPanel(forecastPeriods);
-        await renderFishingPanel(moonToday, phraseObj);
+        renderFishingPanel(moonToday);
         document.getElementById('loader').style.display = 'none';
         document.getElementById('mainContent').style.display = '';
-      } catch (e) {
+      } catch(e) {
         document.getElementById('loader').innerHTML = "Couldn’t load weather data. Try again soon.";
         console.error(e);
       }
     }
-
-    function renderCurrentBox(cur, curLoc, moonToday) {
+    function renderCurrentBox(cur, moonToday) {
       let iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
       let weatherText = (cur.weather || "").toString();
       if (weatherText.toLowerCase().includes("clear")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
@@ -148,19 +135,17 @@
       if (weatherText.toLowerCase().includes("cloud")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
       if (weatherText.toLowerCase().includes("snow")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2744.png";
       if (weatherText.toLowerCase().includes("thunder")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
+      // Moon icon
       let moonPhase = moonToday.moon && moonToday.moon.phase ? moonToday.moon.phase.name : "";
       let moonIcon = moonIcons[moonPhase] || "🌙";
       let moonIllum = moonToday.moon && moonToday.moon.phase ? moonToday.moon.phase.illum : "";
       let moonLabel = moonPhase ? `${moonPhase.replace(/\b\w/g, l=>l.toUpperCase())}${moonIllum !== "" ? ` (${moonIllum}%)` : ""}` : "";
-
-      // Visibility
-      let visStr = cur.visibilityKM != null ? Number(cur.visibilityKM).toFixed(1) + " km" : "—";
-      // Wind
+      // Wind, Gusts, Dir
       let windStr = cur.windSpeedKPH != null ? cur.windSpeedKPH + " km/h" : "—";
-      let gustStr = cur.windGustKPH != null ? cur.windGustKPH + " km/h" : "";
-      if (gustStr) windStr += ` / ${gustStr}`;
-      if (cur.windDir != null && cur.windDir !== "") windStr += " " + degToCardinal(cur.windDir);
-
+      let gustStr = cur.windGustKPH != null ? ` / ${cur.windGustKPH} km/h` : "";
+      let windDirStr = cur.windDir != null ? " " + degToCardinal(Number(cur.windDir)) : "";
+      let visStr = cur.visibilityKM != null ? Number(cur.visibilityKM).toFixed(1) + " km" : "—";
+      let cloudStr = cur.clouds != null ? cur.clouds + "%" : "—";
       document.getElementById('currentBlock').innerHTML = `
         <div class="current-icon-wrap">
           <img class="current-icon" src="${iconUrl}" alt="icon"/>
@@ -173,16 +158,15 @@
             <div class="current-field"><span class="current-label">Feels Like:</span> ${cur.feelslikeC != null ? cur.feelslikeC+"°C" : "—"}</div>
             <div class="current-field"><span class="current-label">Weather:</span> ${weatherText}</div>
             <div class="current-field"><span class="current-label">Humidity:</span> ${cur.humidity != null ? cur.humidity+"%" : "—"}</div>
-            <div class="current-field"><span class="current-label">Wind / Gusts:</span> ${windStr}</div>
+            <div class="current-field"><span class="current-label">Wind / Gusts:</span> ${windStr}${gustStr}${windDirStr}</div>
             <div class="current-field"><span class="current-label">Dew Point:</span> ${cur.dewpointC != null ? cur.dewpointC+"°C" : "—"}</div>
             <div class="current-field"><span class="current-label">Visibility:</span> ${visStr}</div>
-            <div class="current-field"><span class="current-label">Cloud Cover:</span> ${cur.clouds != null ? cur.clouds + "%" : "—"}</div>
+            <div class="current-field"><span class="current-label">Cloud Cover:</span> ${cloudStr}</div>
             <div class="current-field"><span class="current-label">Station:</span> Paeroa</div>
           </div>
         </div>
       `;
     }
-
     function renderAdvice(phrases, moonToday) {
       let out = [];
       if (phrases.shortMET) out.push(phrases.shortMET);
@@ -190,7 +174,6 @@
         out.push(`Moon: ${moonToday.moon.phase.name}, illuminated ${moonToday.moon.phase.illum}%`);
       document.getElementById('adviceBlock').innerHTML = out.join(" &bull; ");
     }
-
     function renderForecasts(periods) {
       const row = document.getElementById('forecastRow');
       row.innerHTML = '';
@@ -222,7 +205,6 @@
         `;
       });
     }
-
     function renderRainPanel(periods) {
       let rain7 = 0;
       periods.forEach(per => { rain7 += Number(per.precipMM || 0); });
@@ -231,8 +213,7 @@
         Forecast total: <b>${rain7.toFixed(1)} mm</b>
       `;
     }
-
-    async function renderFishingPanel(moonToday, phrases) {
+    async function renderFishingPanel(moonToday) {
       const panel = document.getElementById('fishingPanel');
       let tideHtml = `
         <div class="fish-tide">
@@ -255,7 +236,6 @@
         ${tideHtml}
       `;
     }
-
     function formatDay(dateISO) {
       const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       let d = new Date(dateISO);
@@ -265,7 +245,6 @@
       if (!dateISO) return "—";
       return new Date(dateISO).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'});
     }
-
     window.onload = loadWeatherApp;
   </script>
 </body>
