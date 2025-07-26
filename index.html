@@ -1,270 +1,558 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Agora NZ Weather – Smarter Kiwi Weather App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="The only weather app built on real NZ station data with uniquely Kiwi weather advice."/>
-  <link rel="manifest" href="manifest.json">
+  <meta charset="UTF-8" />
+  <title>NZ AI Weather | Paeroa Station</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1163/1163661.png" />
+  <meta name="theme-color" content="#006699" />
   <style>
-    body { margin: 0; padding: 0; background: #f4f7fb; font-family: 'Segoe UI', Arial, sans-serif; color: #15304b; min-height: 100vh;}
-    .app-container { max-width: 500px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 5px 30px #193a5e18; padding-bottom: 34px; min-height: 100vh; display: flex; flex-direction: column;}
-    header { background: linear-gradient(90deg, #18558e 68%, #15b2c1 100%); color: #fff; padding: 34px 22px 18px 22px; border-radius: 0 0 30px 30px; box-shadow: 0 3px 16px #18558e10; text-align: left;}
-    .main-title { font-size: 2.07rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px;}
-    .sub-title { font-size: 1.09rem; opacity: 0.94; font-weight: 400; margin-bottom: 0;}
-    .station-select-row { display: flex; align-items: center; gap: 9px; margin-top: 14px; margin-bottom: 7px;}
-    select, button { font-size: 1rem; padding: 5px 10px; border-radius: 6px; border: 1px solid #18558e; background: #f4f7fb; color: #1c293a; font-family: inherit; }
-    select:disabled { background: #e7eaf3; color: #888; }
-    .current-block { margin: 17px 18px 0 18px; padding: 17px 11px; border-radius: 12px; background: #eaf3fa; box-shadow: 0 2px 8px #cad8e850; display: flex; align-items: center; gap: 18px;}
-    .current-icon-stack { display: flex; flex-direction: column; align-items: center; margin-right: 10px; }
-    .current-icon { width: 70px; height: 70px; object-fit: contain; background: #fff; border-radius: 50%; border: 2.5px solid #18558e; padding: 8px; box-shadow: 0 0 8px #18558e18; margin-bottom: 8px;}
-    .moon-icon { width: 44px; height: 44px; margin-top: 2px;}
-    .current-details { flex: 1; display: flex; flex-direction: column; }
-    .current-temp-big { font-size: 3.3rem; font-weight: bold; color: #16549b; margin: 0 0 10px 0; line-height:1;}
-    .current-grid { display: flex; flex-wrap: wrap; margin-top: 6px; }
-    .current-field { width: 48%; min-width: 160px; font-size: 0.99rem; margin-bottom: 4px; }
-    .current-label { font-weight: bold; color: #19558e; }
-    .advice-block { margin: 17px 18px 0 18px; padding: 13px 15px; border-radius: 10px; background: #e5f2ff; color: #1e364a; font-size: 1.10rem; font-weight: 500; box-shadow: 0 2px 8px #c8e6ff55; min-height: 58px;}
-    .forecast-row { margin: 18px 0 0 0; padding-left: 14px; display: flex; overflow-x: auto; gap: 9px; scrollbar-width: thin;}
-    .forecast-card { flex: 0 0 136px; background: #f7faff; border-radius: 12px; box-shadow: 0 2px 7px #aac2e660; display: flex; flex-direction: column; align-items: center; padding: 11px 7px 13px 7px; cursor: pointer; transition: box-shadow 0.2s; border: 2px solid transparent; min-width: 110px; max-width: 160px;}
-    .forecast-card.selected, .forecast-card:hover { border: 2.5px solid #18558e; box-shadow: 0 6px 16px #aac2e680; background: #e2f3ff;}
-    .forecast-icon { width: 41px; height: 41px; margin-bottom: 6px; margin-top: 2px;}
-    .forecast-day { font-weight: 600; font-size: 1.01rem; margin-bottom: 2px; }
-    .forecast-summary { font-size: 0.97rem; margin-bottom: 4px; color: #2857a1; min-height: 18px; text-align: center;}
-    .forecast-temps { font-size: 1.07rem; font-weight: 500; color: #285680; margin-bottom: 1px;}
-    .forecast-rain { font-size: 0.91rem; color: #0a6899; margin-bottom: 0;}
-    .forecast-advice { font-size:0.97em; color:#1a3e2d; min-height:28px; margin-top:2px;}
-    .modal-bg { position: fixed; left:0; top:0; right:0; bottom:0; background: #23324c45; z-index: 50; display: flex; align-items: flex-end; justify-content: center;}
-    .modal-popup { width: 100%; max-width: 470px; background: #fff; border-radius: 22px 22px 0 0; box-shadow: 0 10px 40px #23324c70; padding: 23px 18px 18px 18px; animation: modalIn 0.3s;}
-    @keyframes modalIn { from { transform: translateY(100px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
-    .modal-header { font-size: 1.30rem; font-weight: bold; margin-bottom: 7px; color: #18558e;}
-    .modal-close-btn { position: absolute; top: 18px; right: 23px; background: none; border: none; font-size: 1.7rem; color: #6c7c8c; cursor: pointer; z-index: 100;}
-    .modal-details { margin-top: 6px; font-size: 1.07rem; color: #23415c;}
-    .rain-panel { margin: 18px 18px 0 18px; padding: 12px 12px 10px 12px; border-radius: 10px; background: #ecf8ff; color: #15304b; box-shadow: 0 2px 8px #c8e6ff40; font-size: 1.03rem; line-height: 1.35em;}
-    .rain-label { font-weight: 600; color: #18558e; margin-bottom: 3px; font-size: 1.08rem;}
-    .fishing-panel { margin: 25px 18px 0 18px; padding: 14px 14px 12px 14px; border-radius: 12px; background: #eafaf7; box-shadow: 0 2px 7px #bceadd33; color: #18558e; font-size: 1.12rem; font-weight: 500; min-height: 50px;}
-    .fish-headline { font-size: 1.18rem; font-weight: bold; margin-bottom: 6px;}
-    .fish-tips { font-size: 1.04rem; margin-top: 7px; color: #217b6a; }
-    .fish-tide { font-size: 0.99em; margin: 7px 0; }
-    .fish-swell { margin: 12px 0; text-align: center; }
-    .fish-swell img { width: 100%; max-width: 320px; border-radius: 6px; box-shadow: 0 2px 12px #2684c222; }
-    @media (max-width: 600px) { .app-container { box-shadow: none; border-radius: 0;} .forecast-row { padding-left: 3px;} .modal-popup { border-radius: 21px 21px 0 0; padding: 11px 6px 17px 7px;} }
-    .loader { margin: 60px auto 34px auto; border: 7px solid #d7e3f5; border-top: 7px solid #0f82c6; border-radius: 50%; width: 44px; height: 44px; animation: spin 1.05s linear infinite;}
-    @keyframes spin { 0% { transform: rotate(0);} 100% { transform: rotate(360deg);} }
-    .credit { text-align: center; color: #b4c2d3; font-size: 0.96em; margin: 31px auto 0 auto;}
-    .station-select-row label { font-size: 1em; color: #133958;}
+    :root {
+      --main: #006699;
+      --accent: #ffcc00;
+      --danger: #d11d1d;
+      --light: #fff;
+      --bg: #f6faff;
+      --shadow: 0 2px 10px 0 #0001;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: #111;
+      font-family: "Segoe UI", Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--main);
+      color: var(--light);
+      padding: 1.2em 1em 1em 1em;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    header h1 { margin: 0; font-size: 2.1em; letter-spacing: 0.02em;}
+    header .station {
+      font-size: 1.2em;
+      margin-top: .25em;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      opacity: 0.85;
+    }
+    .container { width: 100%; max-width: 480px; margin: auto; padding: 1em 0 3em 0; }
+    .current {
+      background: var(--light);
+      border-radius: 1em;
+      margin: 1.2em 1em 1em 1em;
+      padding: 1.1em 1.2em;
+      box-shadow: var(--shadow);
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .current .weather-icon {
+      width: 60px; height: 60px;
+      margin-bottom: .5em;
+    }
+    .current .temp-main { font-size: 2.7em; font-weight: 700;}
+    .current .feels { font-size: 1em; color: #444; margin-bottom: .2em;}
+    .current .desc { font-size: 1.15em; font-weight: 500; margin-bottom: .6em;}
+    .current .meta {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9em;
+      margin-top: .6em;
+    }
+    .current .meta span {
+      font-size: 0.98em; background: #eef5fb; border-radius: 1em; padding: 0.4em 0.95em;
+    }
+    .advice-section {
+      background: var(--accent);
+      color: #333;
+      border-radius: 1em;
+      margin: 1em 1em 1.5em 1em;
+      padding: 1em 1.2em;
+      box-shadow: var(--shadow);
+      font-size: 1.18em;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: flex-start;
+      gap: 1em;
+      min-height: 70px;
+    }
+    .advice-section .advice-icon { font-size: 2em; line-height: 1; }
+    .forecast-bar {
+      margin: 0.8em 0.2em 0 0.2em;
+      display: flex; overflow-x: auto; gap: 0.9em;
+      padding-bottom: 0.7em;
+      scroll-snap-type: x mandatory;
+    }
+    .forecast-card {
+      min-width: 130px; max-width: 130px;
+      background: var(--light);
+      border-radius: 0.95em;
+      box-shadow: var(--shadow);
+      padding: .9em 0.8em;
+      display: flex; flex-direction: column; align-items: center; gap: 0.1em;
+      cursor: pointer; transition: box-shadow .12s;
+      scroll-snap-align: start;
+      border: 2px solid transparent;
+    }
+    .forecast-card:hover, .forecast-card.active {
+      box-shadow: 0 3px 18px 0 #00669915;
+      border-color: var(--accent);
+    }
+    .forecast-card img { width: 36px; height: 36px; }
+    .forecast-card .date { font-size: 1em; font-weight: 600;}
+    .forecast-card .summary { font-size: 1em; opacity: 0.8;}
+    .forecast-card .temp { font-size: 1.12em; font-weight: 600;}
+    .forecast-card .rain { font-size: 1em; color: #1a58a5;}
+    .forecast-card .wind { font-size: 0.96em; color: #3a4e88;}
+    .forecast-card .humidity { font-size: 0.96em; color: #444;}
+    .details-popup {
+      display: none;
+      position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+      background: #0008; z-index: 2000;
+      justify-content: center; align-items: center;
+    }
+    .details-popup.active { display: flex; }
+    .details-content {
+      background: var(--light);
+      border-radius: 1.1em;
+      max-width: 400px; width: 97vw;
+      padding: 1.4em 1.1em;
+      box-shadow: var(--shadow);
+      position: relative;
+      animation: popupIn 0.19s;
+    }
+    @keyframes popupIn {
+      from { transform: translateY(30px) scale(0.97); opacity: 0.2;}
+      to   { transform: none; opacity: 1;}
+    }
+    .details-content .close {
+      position: absolute; top: 0.7em; right: 1em;
+      font-size: 1.7em; color: #888; cursor: pointer;
+      transition: color .1s;
+    }
+    .details-content .close:hover { color: var(--main);}
+    .details-content h3 { margin: 0 0 .7em 0; }
+    .details-content .popup-row {
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 0.4em 0;
+      font-size: 1.04em;
+    }
+    .rain-history {
+      margin: 1em 1em 1.5em 1em;
+      background: var(--light);
+      border-radius: 1em;
+      box-shadow: var(--shadow);
+      padding: 1.2em 1.1em 1.2em 1.1em;
+    }
+    .rain-history h2 { font-size: 1.2em; margin: 0 0 0.8em 0; }
+    .rain-stats { display: flex; gap: 1.1em; flex-wrap: wrap; }
+    .rain-stats span {
+      font-size: 1.07em;
+      background: #eaf3fa;
+      border-radius: .8em;
+      padding: .5em 1em;
+      min-width: 90px;
+      text-align: center;
+      margin-bottom: .3em;
+    }
+    .trend-section {
+      margin: 1.2em 1em;
+      background: var(--light);
+      border-radius: 1em;
+      box-shadow: var(--shadow);
+      padding: 1em 1.1em;
+    }
+    .trend-section h2 { font-size: 1.13em; margin: 0 0 0.7em 0;}
+    .trend-row {
+      display: flex; flex-wrap: wrap; gap: .9em;
+      font-size: 1em;
+    }
+    .trend-row span {
+      background: #e7f1f7;
+      border-radius: .7em;
+      padding: .48em 1em;
+    }
+    .station-selector {
+      margin: 1.2em auto 0 auto;
+      max-width: 470px;
+      display: flex; align-items: center; justify-content: center; gap: 0.9em;
+      flex-wrap: wrap;
+    }
+    .station-selector label { font-weight: 500;}
+    .station-selector select {
+      font-size: 1.05em;
+      padding: 0.2em 1em;
+      border-radius: .7em;
+      border: 1px solid #ccc;
+      outline: none;
+      background: #fafdff;
+      cursor: pointer;
+    }
+    footer {
+      margin-top: auto;
+      text-align: center;
+      color: #666;
+      font-size: 1em;
+      background: #e0effc;
+      padding: .8em 1em;
+      border-top: 1px solid #d4e8f5;
+      letter-spacing: 0.01em;
+    }
+    @media (max-width: 600px) {
+      .container { padding-bottom: 1.5em; }
+      .forecast-bar { gap: 0.5em;}
+      .forecast-card { min-width: 110px; max-width: 115px; padding: .8em 0.5em;}
+      .rain-stats span, .trend-row span { min-width: 65px; font-size: 0.99em;}
+    }
   </style>
 </head>
 <body>
-  <div class="app-container">
-    <header>
-      <div class="main-title">Agora NZ Weather</div>
-      <div class="sub-title">The only NZ weather app with real station data &amp; truly practical Kiwi advice</div>
-      <div class="station-select-row">
-        <label for="stationSelect">Station:</label>
-        <select id="stationSelect" disabled>
-          <option value="IPAERO15" selected>Paeroa (XWeather Actual Station)</option>
-        </select>
-      </div>
-    </header>
-    <div id="loader" class="loader"></div>
-    <div id="mainContent" style="display:none;">
-      <section><div class="current-block" id="currentBlock"></div></section>
-      <section><div class="advice-block" id="adviceBlock"></div></section>
-      <section><div class="forecast-row" id="forecastRow"></div></section>
-      <section><div class="rain-panel" id="rainPanel"></div></section>
-      <section><div class="fishing-panel" id="fishingPanel"></div></section>
-    </div>
-    <div id="modalBg" class="modal-bg" style="display:none;"><div class="modal-popup" id="modalPopup"></div></div>
-    <div class="credit">Powered by live NZ station data • 2025 Agora<br><span style="font-size:0.89em;opacity:0.8;">Proudly New Zealand owned & built for Kiwis</span></div>
+  <header>
+    <h1>Paeroa AI Weather</h1>
+    <div class="station">NZ Weather Station: <span id="station-name">Paeroa</span></div>
+  </header>
+
+  <div class="station-selector">
+    <label for="station">Select Station:</label>
+    <select id="station">
+      <option value="pws_paeroa">Paeroa</option>
+      <!-- Future: add more options here -->
+    </select>
   </div>
+  
+  <main class="container">
+    <section id="current" class="current" aria-live="polite"></section>
+    <section id="advice" class="advice-section"></section>
+    <section>
+      <div class="forecast-bar" id="forecast-bar"></div>
+    </section>
+    <section class="rain-history">
+      <h2>Rainfall & History</h2>
+      <div class="rain-stats" id="rain-stats"></div>
+    </section>
+    <section class="trend-section">
+      <h2>Trends & Records</h2>
+      <div class="trend-row" id="trend-row"></div>
+    </section>
+  </main>
+
+  <div class="details-popup" id="details-popup">
+    <div class="details-content" id="details-content">
+      <span class="close" id="popup-close" title="Close">&times;</span>
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2025 Agora Weather NZ &mdash; Real Station Data | <span id="version">v1.0</span>
+  </footer>
+  
   <script>
-    // --- CONFIG
-    const client_id = "U8feQfLlcEfcXDfsWZs4C";
-    const client_secret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-    // Add all possible current obs fields needed (wind gust, clouds, visibility)
-    const CURRENT_URL = `https://data.api.xweather.com/conditions/pws_paeroa?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.visibilityKM,periods.clouds&client_id=${client_id}&client_secret=${client_secret}`;
-    // Forecast
-    const FORECAST_URL = `https://developer.xweather.com/product/api/output?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcHRpb25zIjp7ImxvYyI6eyJ2YWx1ZSI6InB3c19wYWVyb2EiLCJhdXRvIjpmYWxzZX0sImZvcm1hdCI6Impzb24iLCJwYXJhbWV0ZXJzIjp7ImZpbHRlciI6ImRheW5pZ2h0IiwibGltaXQiOjcsImZpZWxkcyI6WyJwZXJpb2RzLmRhdGVUaW1lSVNPIiwibG9jIiwicGVyaW9kcy5wb3AiLCJwZXJpb2RzLnByZWNpcE1NIiwicGVyaW9kcy5taW5EZXdwb2ludEMiLCJwZXJpb2RzLndlYXRoZXIiXX19LCJlbmRwb2ludCI6ImZvcmVjYXN0cyIsImFjdGlvbiI6ImlkIiwiaWF0IjoxNzUzNTE2NTc3fQ.5mDAisIJqg46Pp3XVFxkW4nU-C0uJ8Km52tcqqRCJKk`;
-    // Summary/phrases
-    const PHRASES_URL = `https://data.api.xweather.com/phrases/summary/pws_paeroa?format=json&client_id=${client_id}&client_secret=${client_secret}`;
-    // Sun/moon
-    const now = new Date();
-    const pad = n => n<10?"0"+n:n;
-    const sunmoon_from = `${pad(now.getMonth()+1)}/${pad(now.getDate())}/${now.getFullYear()}`;
-    const sunmoon_to = `${pad(now.getMonth()+1)}/${pad(now.getDate()+1)}/${now.getFullYear()}`;
-    const MOON_URL = `https://data.api.xweather.com/sunmoon/pws_paeroa?from=${sunmoon_from}&to=${sunmoon_to}&format=json&fields=dateTimeISO,timestamp,profile,loc,place,sun,moon&client_id=${client_id}&client_secret=${client_secret}`;
-    // Tides chart
-    const tideImgUrl = "https://www.metservice.com/publicData/webdata/marine/boating/tidegraphs/Firth-of-Thames.png";
+    // ===== CONFIG =====
+    const API_KEY = "DEMO_API_KEY"; // REPLACE with your real API key
+    const BASE = "https://data.api.xweather.com";
+    // Example endpoints:
+    // Forecast:   /forecasts/{station}?apiKey=...
+    // Summary:    /conditions/summary/{station}?apiKey=...
+    const STATION_MAP = {
+      "pws_paeroa": { name: "Paeroa", code: "pws_paeroa" },
+      // More stations can be added here
+    };
+    const version = "1.0";
+    document.getElementById('version').textContent = "v" + version;
+    
+    // ===== STATE =====
+    let currentStation = "pws_paeroa";
+    let lastForecast = null, lastActual = null;
 
-    // --- Utility
-    function degToCardinal(deg) {
-      if (deg == null || isNaN(deg)) return "";
-      const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-      return dirs[Math.round(((deg % 360) / 45)) % 8];
+    // ===== HELPERS =====
+    function fmtNum(n, d=1) {
+      return n !== undefined && n !== null ? Number(n).toFixed(d) : '—';
     }
-    function moonPhaseIcon(phase) {
-      if (!phase) return "";
-      const phaseL = phase.toLowerCase();
-      if (phaseL.includes("new")) return "🌑";
-      if (phaseL.includes("waxing crescent")) return "🌒";
-      if (phaseL.includes("first quarter")) return "🌓";
-      if (phaseL.includes("waxing gibbous")) return "🌔";
-      if (phaseL.includes("full")) return "🌕";
-      if (phaseL.includes("waning gibbous")) return "🌖";
-      if (phaseL.includes("last quarter")) return "🌗";
-      if (phaseL.includes("waning crescent")) return "🌘";
-      return "🌙";
+    function fmtDate(dateStr) {
+      // ISO to ddd, D MMM
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-NZ', {weekday:'short', day:'numeric', month:'short'});
     }
-
-    // --- Main Loader
-    async function loadWeatherApp() {
-      document.getElementById('loader').style.display = 'block';
-      document.getElementById('mainContent').style.display = 'none';
-      try {
-        // Load all in parallel
-        const [curRes, fcRes, phrRes, moonRes] = await Promise.all([
-          fetch(CURRENT_URL).then(r=>r.json()),
-          fetch(FORECAST_URL).then(r=>r.json()),
-          fetch(PHRASES_URL).then(r=>r.json()),
-          fetch(MOON_URL).then(r=>r.json())
-        ]);
-        // CURRENT (single latest obs)
-        let cur = (curRes && curRes.response && curRes.response[0] && curRes.response[0].periods && curRes.response[0].periods[0]) || {};
-        // FORECAST (7d, daytime & night, use "periods")
-        let forecastPeriods = (fcRes && fcRes.response && fcRes.response[0] && fcRes.response[0].periods) || [];
-        // PHRASES
-        let phraseObj = phrRes.response && phrRes.response[0] && phrRes.response[0].phrases ? phrRes.response[0].phrases : {};
-        // MOON
-        let moonToday = moonRes.response && moonRes.response[0] ? moonRes.response[0] : {};
-
-        renderCurrentBox(cur, moonToday);
-        renderAdvice(phraseObj, moonToday);
-        renderForecasts(forecastPeriods);
-        renderRainPanel(forecastPeriods);
-        await renderFishingPanel(moonToday);
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('mainContent').style.display = '';
-      } catch (e) {
-        document.getElementById('loader').innerHTML = "Couldn’t load weather data. Try again soon.";
-        console.error(e);
-      }
+    function fmtWindDir(deg) {
+      const dirs = ["N","NE","E","SE","S","SW","W","NW"];
+      return dirs[Math.round(deg/45) % 8];
+    }
+    function iconUrl(icon) {
+      // Assume endpoint returns "icon": "partly_cloudy_day", or a full url
+      if (!icon) return '';
+      if (icon.startsWith("http")) return icon;
+      return `https://assets.xweather.com/icons/v1/${icon}.svg`;
     }
 
-    function renderCurrentBox(cur, moonToday) {
-      // All fields directly from XWeather current endpoint
-      let iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
-      let weatherText = (cur.weather && cur.weather !== "null") ? cur.weather : "—";
-      if (weatherText.toLowerCase().includes("clear")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
-      if (weatherText.toLowerCase().includes("rain")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f327.png";
-      if (weatherText.toLowerCase().includes("cloud")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
-      if (weatherText.toLowerCase().includes("snow")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2744.png";
-      if (weatherText.toLowerCase().includes("thunder")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
-      // Moon phase as icon under weather icon
-      let moonIcon = "";
-      let moonPhase = moonToday && moonToday.moon && moonToday.moon.phase && moonToday.moon.phase.name;
-      if (moonPhase) moonIcon = `<span class="moon-icon" title="${moonPhase}" style="font-size:2.2em; display:block; text-align:center;">${moonPhaseIcon(moonPhase)}</span>`;
-      document.getElementById('currentBlock').innerHTML = `
-        <div class="current-icon-stack">
-          <img class="current-icon" src="${iconUrl}" alt="icon"/>
-          ${moonIcon}
-        </div>
-        <div class="current-details">
-          <div class="current-temp-big">${cur.tempC != null ? Number(cur.tempC).toFixed(1) + "°C" : "—"}</div>
-          <div class="current-grid">
-            <div class="current-field"><span class="current-label">Feels Like:</span> ${cur.feelslikeC != null ? cur.feelslikeC+"°C" : "—"}</div>
-            <div class="current-field"><span class="current-label">Weather:</span> ${weatherText}</div>
-            <div class="current-field"><span class="current-label">Humidity:</span> ${cur.humidity != null ? cur.humidity+"%" : "—"}</div>
-            <div class="current-field"><span class="current-label">Wind:</span> ${cur.windSpeedKPH != null ? cur.windSpeedKPH+" km/h" : "—"}${cur.windGustKPH != null ? " / " + cur.windGustKPH + " km/h gust" : ""} ${cur.windDir != null ? "(" + degToCardinal(cur.windDir) + ")" : ""}</div>
-            <div class="current-field"><span class="current-label">Dew Point:</span> ${cur.dewpointC != null ? cur.dewpointC+"°C" : "—"}</div>
-            <div class="current-field"><span class="current-label">Visibility:</span> ${cur.visibilityKM != null ? cur.visibilityKM+" km" : "—"}</div>
-            <div class="current-field"><span class="current-label">Cloud Cover:</span> ${cur.clouds != null ? cur.clouds+"%" : "—"}</div>
-          </div>
+    function getSeason(dt=new Date()) {
+      // NZ seasons: Summer = Dec-Feb, Autumn = Mar-May, Winter = Jun-Aug, Spring = Sep-Nov
+      const m = dt.getMonth() + 1;
+      if (m >=12 || m <=2) return "summer";
+      if (m >=3 && m<=5) return "autumn";
+      if (m >=6 && m<=8) return "winter";
+      return "spring";
+    }
+
+    // ===== DATA FETCHERS =====
+    async function getWeather(station) {
+      // Fetch both forecast and daily actuals in parallel
+      const code = STATION_MAP[station].code;
+      const forecastUrl = `${BASE}/forecasts/${code}?apiKey=${API_KEY}`;
+      const summaryUrl = `${BASE}/conditions/summary/${code}?apiKey=${API_KEY}`;
+      const [forecastRes, summaryRes] = await Promise.all([
+        fetch(forecastUrl),
+        fetch(summaryUrl)
+      ]);
+      if (!forecastRes.ok || !summaryRes.ok) throw new Error("Failed to fetch weather data");
+      const forecast = await forecastRes.json();
+      const actual = await summaryRes.json();
+      return { forecast, actual };
+    }
+
+    // ===== UI RENDERERS =====
+    function renderCurrent(actual) {
+      // Render the most recent observed data
+      const d = actual?.periods?.[0];
+      if (!d) return;
+      lastActual = d;
+      const el = document.getElementById("current");
+      el.innerHTML = `
+        <img class="weather-icon" src="${iconUrl(d.icon)}" alt="${d.weather || ''}">
+        <div class="temp-main">${fmtNum(d.temp)}°C</div>
+        <div class="feels">Feels like: ${fmtNum(d.feelslike)}°C</div>
+        <div class="desc">${d.weather || '—'}</div>
+        <div class="meta">
+          <span>Min: ${fmtNum(d.tempmin)}°</span>
+          <span>Max: ${fmtNum(d.tempmax)}°</span>
+          <span>Rain: ${fmtNum(d.precip)}mm</span>
+          <span>Humidity: ${fmtNum(d.humidity)}%</span>
+          <span>Wind: ${fmtNum(d.windspeed)}km/h ${fmtWindDir(d.winddir)}</span>
         </div>
       `;
     }
 
-    function renderAdvice(phrases, moonToday) {
-      // Use the "short" or "long" MET phrase, add moonrise/set for fishing
-      let out = [];
-      if (phrases.shortMET) out.push(phrases.shortMET);
-      if (moonToday && moonToday.moon && moonToday.moon.phase && moonToday.moon.phase.name)
-        out.push(`Moon: ${moonToday.moon.phase.name}, illuminated ${moonToday.moon.phase.illum}%`);
-      document.getElementById('adviceBlock').innerHTML = out.join(" &bull; ");
+    function renderAdvice(forecast, actual) {
+      // "AI" context-aware NZ advice
+      const f = forecast?.periods?.[0], a = actual?.periods?.[0];
+      if (!f || !a) return;
+      // Example: build advice logic for NZ farm context
+      const now = new Date();
+      const season = getSeason(now);
+      const rain = Number(f.precip || 0), wind = Number(f.windspeed || 0), temp = Number(f.tempmax || 0);
+      const humidity = Number(f.humiditymax || 0);
+      let tips = [];
+      let icon = "🌦️";
+      // Season-specific
+      if (season === "winter") {
+        if (temp < 8) tips.push("Frost risk: Check water troughs early.");
+        if (rain > 10) tips.push("Muddy paddocks expected—consider moving break fences.");
+        if (wind > 35) tips.push("High wind: Watch for wind chill on calves.");
+      } else if (season === "summer") {
+        if (temp > 27) tips.push("Heat stress possible—ensure shade & water for stock.");
+        if (rain < 2) tips.push("Drying out—rotate paddocks, delay nitrogen.");
+      }
+      // Weather condition
+      if (rain > 20) {
+        tips.push("Heavy rain: Plan for run-off, keep drains clear.");
+        icon = "🌧️";
+      } else if (rain > 5) {
+        tips.push("Keep an eye on gateways for mud build-up.");
+        icon = "🌦️";
+      }
+      if (wind > 40) tips.push("Secure covers, loose items—strong winds forecast.");
+      if (humidity > 90 && season === "autumn") tips.push("Facial eczema risk rising—monitor pasture.");
+      // Compare forecast/actual
+      const errRain = Math.abs((f.precip || 0) - (a.precip || 0));
+      if (errRain > 10) tips.push("Forecast missed recent rain—watch for fast-changing conditions.");
+      // Extra
+      if (f.weather && f.weather.toLowerCase().includes("fog")) tips.push("Foggy start: Take care on local roads.");
+      if (now.getDay() === 0) tips.push("Sunday—prep for next week’s work.");
+      if (tips.length === 0) { tips.push("No major issues—carry on as usual!"); icon = "🌤️"; }
+      // Compose
+      document.getElementById("advice").innerHTML =
+        `<span class="advice-icon">${icon}</span><span>${tips.join(" ")}</span>`;
     }
 
-    function renderForecasts(periods) {
-      // Only use fields from XWeather forecast
-      const row = document.getElementById('forecastRow');
-      row.innerHTML = '';
-      periods.forEach(per => {
-        let weather = per.weather || "—";
-        let iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
-        if (weather.toLowerCase().includes("clear")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
-        if (weather.toLowerCase().includes("rain")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f327.png";
-        if (weather.toLowerCase().includes("cloud")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
-        if (weather.toLowerCase().includes("snow")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2744.png";
-        if (weather.toLowerCase().includes("thunder")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
-        let rainMM = per.precipMM != null ? Number(per.precipMM).toFixed(1) : "—";
-        let pop = per.pop != null ? per.pop + "%" : "—";
-        row.innerHTML += `
-          <div class="forecast-card">
-            <div class="forecast-day">${formatDay(per.dateTimeISO)}</div>
-            <img class="forecast-icon" src="${iconUrl}" alt="icon"/>
-            <div class="forecast-summary">${weather}</div>
-            <div class="forecast-temps">${per.minDewpointC != null ? per.minDewpointC + "°C/" : ""}${per.maxDewpointC != null ? per.maxDewpointC + "°C" : ""}</div>
-            <div class="forecast-rain">Rain: ${rainMM} mm (${pop})</div>
-          </div>
+    function renderForecast(forecast) {
+      // Show 7 day cards with click-to-details
+      const days = forecast?.periods || [];
+      const bar = document.getElementById("forecast-bar");
+      bar.innerHTML = "";
+      days.forEach((day, idx) => {
+        const c = document.createElement("div");
+        c.className = "forecast-card";
+        c.tabIndex = 0;
+        c.innerHTML = `
+          <div class="date">${fmtDate(day.date)}</div>
+          <img src="${iconUrl(day.icon)}" alt="${day.weather}">
+          <div class="summary">${day.weather || ''}</div>
+          <div class="temp"><b>${fmtNum(day.tempmax)}°</b> / <span>${fmtNum(day.tempmin)}°</span></div>
+          <div class="rain">Rain: ${fmtNum(day.precip)}mm</div>
+          <div class="wind">Wind: ${fmtNum(day.windspeed)}km/h</div>
+          <div class="humidity">Hum: ${fmtNum(day.humiditymax)}%</div>
         `;
+        c.onclick = () => showDetails(day, forecast.periods[idx-1], forecast.periods[idx+1]);
+        bar.appendChild(c);
       });
     }
 
-    function renderRainPanel(periods) {
-      // Total rainfall calculation from forecast data
-      let rain7 = 0;
-      periods.forEach(per => { rain7 += Number(per.precipMM || 0); });
-      document.getElementById('rainPanel').innerHTML = `
-        <span class="rain-label">Rainfall Totals (Next 7d):</span><br>
-        Forecast total: <b>${rain7.toFixed(1)} mm</b>
+    function showDetails(day, prev, next) {
+      // Pop up detailed breakdown for selected day (plus previous/next context)
+      const el = document.getElementById("details-content");
+      let out = `<h3>${fmtDate(day.date)} &ndash; ${day.weather || ''}</h3>`;
+      out += `<div class="popup-row"><img src="${iconUrl(day.icon)}" alt="" style="width:42px;height:42px;margin-right:0.6em;">`
+      out += `<span><b>${fmtNum(day.tempmax)}° / ${fmtNum(day.tempmin)}°C</b></span></div>`;
+      out += `<div class="popup-row">Feels like: <span>${fmtNum(day.feelslike)}°C</span></div>`;
+      out += `<div class="popup-row">Rain: <span>${fmtNum(day.precip)} mm</span></div>`;
+      out += `<div class="popup-row">PoP: <span>${fmtNum(day.pop,0)}%</span></div>`;
+      out += `<div class="popup-row">Humidity: <span>${fmtNum(day.humiditymax)}%</span></div>`;
+      out += `<div class="popup-row">Wind: <span>${fmtNum(day.windspeed)} km/h ${fmtWindDir(day.winddir)}</span></div>`;
+      out += `<div class="popup-row">Gusts: <span>${fmtNum(day.windgust)} km/h</span></div>`;
+      out += `<div class="popup-row">Dewpoint: <span>${fmtNum(day.dewpoint)}°C</span></div>`;
+      out += `<div class="popup-row">Cloud: <span>${fmtNum(day.cloud,0)}%</span></div>`;
+      out += `<div class="popup-row">UV: <span>${fmtNum(day.uv,1)}</span></div>`;
+      if (prev) out += `<div class="popup-row" style="opacity:.6">Prev day: ${fmtNum(prev.tempmax)}°/${fmtNum(prev.tempmin)}°, Rain: ${fmtNum(prev.precip)}mm</div>`;
+      if (next) out += `<div class="popup-row" style="opacity:.6">Next day: ${fmtNum(next.tempmax)}°/${fmtNum(next.tempmin)}°, Rain: ${fmtNum(next.precip)}mm</div>`;
+      // Smart daily advice
+      out += `<div style="margin-top:.8em; padding:.7em 1em; background:#f5f7dc;border-radius:0.7em;color:#574910;">
+        <b>AI Advice:</b> ${genDayAdvice(day)}
+      </div>`;
+      el.innerHTML = out + `<span class="close" id="popup-close" title="Close">&times;</span>`;
+      document.getElementById("details-popup").classList.add("active");
+      // Add close handler
+      el.querySelector("#popup-close").onclick = () =>
+        document.getElementById("details-popup").classList.remove("active");
+    }
+    document.getElementById("details-popup").onclick = (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.classList.remove("active");
+    }
+
+    function genDayAdvice(day) {
+      // Extra, per-day logic (expandable!)
+      let tips = [];
+      const temp = Number(day.tempmax || 0), rain = Number(day.precip || 0), wind = Number(day.windspeed || 0);
+      const humidity = Number(day.humiditymax || 0), uv = Number(day.uv || 0);
+      if (rain > 25) tips.push("Prepare for heavy rain. Check runoff and access ways.");
+      if (wind > 45) tips.push("Dangerous wind: avoid work at heights.");
+      if (humidity > 92) tips.push("High humidity: check for fungus/disease risk.");
+      if (uv > 7) tips.push("High UV: sun protection for all staff.");
+      if (temp < 2) tips.push("Possible frost—cover sensitive crops.");
+      if (tips.length === 0) tips.push("Standard conditions—no special precautions needed.");
+      return tips.join(" ");
+    }
+
+    function renderRainHistory(actual, trend) {
+      const a = actual?.periods?.[0];
+      if (!a) return;
+      // Compose rain totals, history
+      const rs = document.getElementById("rain-stats");
+      rs.innerHTML = `
+        <span>Today: <b>${fmtNum(a.precip)}mm</b></span>
+        <span>7 Days: <b>${fmtNum(trend.rain7)}mm</b></span>
+        <span>30 Days: <b>${fmtNum(trend.rain30)}mm</b></span>
+        <span>YTD: <b>${fmtNum(trend.rainYTD)}mm</b></span>
+        <span>Wettest: <b>${fmtNum(trend.wettest)}mm</b></span>
+        <span>Driest: <b>${fmtNum(trend.driest)}mm</b></span>
+      `;
+    }
+    function renderTrends(trend) {
+      // Show max/min temps, rain streaks, etc.
+      const el = document.getElementById("trend-row");
+      el.innerHTML = `
+        <span>High: ${fmtNum(trend.high)}°C</span>
+        <span>Low: ${fmtNum(trend.low)}°C</span>
+        <span>Wettest Day: ${fmtNum(trend.wettest)}mm</span>
+        <span>Driest Day: ${fmtNum(trend.driest)}mm</span>
+        <span>Rain Events: ${trend.rainEvents || '—'}</span>
       `;
     }
 
-    async function renderFishingPanel(moonToday) {
-      const panel = document.getElementById('fishingPanel');
-      // Tide chart image and moon info
-      let tideHtml = `
-        <div class="fish-tide">
-          <img src="${tideImgUrl}" alt="Firth of Thames Tide Chart" style="width:100%;max-width:420px;border-radius:9px;box-shadow:0 2px 14px #8fbce855;" />
-          <div style="text-align:center;font-size:0.97em;margin-top:2px;">Live tide chart for Thames (Firth of Thames) – from MetService</div>
-        </div>
-      `;
-      let moonStr = "";
-      if (moonToday && moonToday.moon && moonToday.moon.riseISO && moonToday.moon.setISO) {
-        moonStr = `Moonrise: ${formatTimeNZ(moonToday.moon.riseISO)}, Moonset: ${formatTimeNZ(moonToday.moon.setISO)}`;
+    // ======= TRENDS (Calculated) =======
+    function calculateTrends(history) {
+      // history: array of past day actuals (fetched in a real deployment, or just last 30 from localStorage)
+      let rain7=0, rain30=0, rainYTD=0, high=-99, low=99, wettest=0, driest=999, rainEvents=0;
+      const today = new Date();
+      for (const day of history) {
+        const dt = new Date(day.date);
+        const yearMatch = dt.getFullYear() === today.getFullYear();
+        if (dt >= addDays(today, -6)) rain7 += Number(day.precip||0);
+        if (dt >= addDays(today, -29)) rain30 += Number(day.precip||0);
+        if (yearMatch) rainYTD += Number(day.precip||0);
+        if (day.tempmax > high) high = day.tempmax;
+        if (day.tempmin < low) low = day.tempmin;
+        if (day.precip > wettest) wettest = day.precip;
+        if (day.precip < driest) driest = day.precip;
+        if ((day.precip||0) > 2) rainEvents++;
       }
-      let tips = [
-        "Check wind and rain in main forecast for best fishing windows.",
-        "Tide and moon phase below are live.",
-        moonStr
-      ];
-      panel.innerHTML = `
-        <div class="fish-headline">Coromandel Fishing & Swell</div>
-        <div class="fish-tips">${tips.filter(Boolean).join('<br>')}</div>
-        ${tideHtml}
-      `;
+      return { rain7, rain30, rainYTD, high, low, wettest, driest, rainEvents };
+    }
+    function addDays(d, n) {
+      let dd = new Date(d); dd.setDate(dd.getDate()+n); return dd;
     }
 
-    function formatDay(dateISO) {
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      let d = new Date(dateISO);
-      return days[d.getDay()] + " " + d.getDate();
+    // ====== LOCAL STORAGE: Store last 30 daily summaries for learning/self-correction =====
+    function saveActualSummary(actual) {
+      const storeKey = "paeroa_actual_history";
+      let history = [];
+      try { history = JSON.parse(localStorage.getItem(storeKey)) || []; } catch {}
+      // Add today's actual (overwrite if already present for today)
+      const today = (actual?.periods?.[0]?.date || '').split('T')[0];
+      if (!today) return;
+      history = history.filter(d => !d.date.startsWith(today));
+      history.unshift(actual.periods[0]);
+      if (history.length > 60) history = history.slice(0,60); // Keep only 2 months
+      localStorage.setItem(storeKey, JSON.stringify(history));
+      return history;
     }
-    function formatTimeNZ(dateISO) {
-      if (!dateISO) return "—";
-      return new Date(dateISO).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'});
+    function loadActualHistory() {
+      const storeKey = "paeroa_actual_history";
+      try { return JSON.parse(localStorage.getItem(storeKey)) || []; }
+      catch { return []; }
     }
 
-    window.onload = loadWeatherApp;
+    // ===== INIT & EVENTS =====
+    async function refresh() {
+      try {
+        document.getElementById("current").innerHTML = "<em>Loading current conditions...</em>";
+        document.getElementById("advice").innerHTML = "<em>Loading advice...</em>";
+        document.getElementById("forecast-bar").innerHTML = "";
+        document.getElementById("rain-stats").innerHTML = "";
+        document.getElementById("trend-row").innerHTML = "";
+
+        const data = await getWeather(currentStation);
+        lastForecast = data.forecast;
+        lastActual = data.actual;
+
+        renderCurrent(lastActual);
+        renderForecast(lastForecast);
+        renderAdvice(lastForecast, lastActual);
+
+        // Save today's actual, then calculate trends using all available history
+        const hist = saveActualSummary(lastActual) || [];
+        const trend = calculateTrends([...(hist || []), ...(lastForecast?.periods || [])]);
+        renderRainHistory(lastActual, trend);
+        renderTrends(trend);
+
+      } catch (e) {
+        document.getElementById("current").innerHTML = "<span style='color:var(--danger)'>Error loading weather.</span>";
+        document.getElementById("advice").innerHTML = "";
+      }
+    }
+
+    // Station selector
+    document.getElementById("station").addEventListener("change", (e) => {
+      currentStation = e.target.value;
+      document.getElementById("station-name").textContent = STATION_MAP[currentStation].name;
+      refresh();
+    });
+
+    // Initial load
+    refresh();
+    // Optional: setInterval(refresh, 1000 * 60 * 7); // Auto-refresh every 7 minutes
+
   </script>
 </body>
 </html>
