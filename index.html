@@ -103,7 +103,6 @@
       return dirs[Math.round(((deg % 360) / 45)) % 8];
     }
     function moonPhaseIcon(phase) {
-      // Simple mapping of phase name to emoji (or use a static PNG set if you want)
       if (!phase) return "";
       const phaseL = phase.toLowerCase();
       if (phaseL.includes("new")) return "🌑";
@@ -131,7 +130,6 @@
         ]);
         // CURRENT (single latest obs)
         let cur = (curRes && curRes.response && curRes.response[0] && curRes.response[0].periods && curRes.response[0].periods[0]) || {};
-        let curLoc = curRes.response && curRes.response[0] && curRes.response[0].loc ? curRes.response[0].loc : {};
         // FORECAST (7d, daytime & night, use "periods")
         let forecastPeriods = (fcRes && fcRes.response && fcRes.response[0] && fcRes.response[0].periods) || [];
         // PHRASES
@@ -161,10 +159,10 @@
       if (weatherText.toLowerCase().includes("cloud")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
       if (weatherText.toLowerCase().includes("snow")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2744.png";
       if (weatherText.toLowerCase().includes("thunder")) iconUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
-      // Moon phase as icon
+      // Moon phase as icon under weather icon
       let moonIcon = "";
       let moonPhase = moonToday && moonToday.moon && moonToday.moon.phase && moonToday.moon.phase.name;
-      if (moonPhase) moonIcon = `<span class="moon-icon" title="${moonPhase}">${moonPhaseIcon(moonPhase)}</span>`;
+      if (moonPhase) moonIcon = `<span class="moon-icon" title="${moonPhase}" style="font-size:2.1em;">${moonPhaseIcon(moonPhase)}</span>`;
       document.getElementById('currentBlock').innerHTML = `
         <div class="current-icon-stack">
           <img class="current-icon" src="${iconUrl}" alt="icon"/>
