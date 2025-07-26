@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Agora NZ Weather – Real Paeroa Data</title>
+  <title>Agora NZ Weather – Smarter Kiwi Weather App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="NZ weather with live tides, swell, fishing, and accurate forecast for the Thames/Coromandel region.">
+  <link rel="manifest" href="manifest.json">
   <style>
     body {
       margin: 0; padding: 0;
@@ -12,259 +14,307 @@
       color: #15304b;
       min-height: 100vh;
     }
-    .container {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 20px;
+    .app-container {
+      max-width: 500px; margin: 0 auto;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 5px 30px #193a5e18;
+      padding-bottom: 34px;
+      min-height: 100vh; display: flex; flex-direction: column;
     }
-    .header {
-      background: linear-gradient(90deg,#134574,#2183bc);
-      color: #fff;
-      padding: 16px 18px 8px 18px;
-      font-size: 1.23em;
-      border-radius: 0 0 18px 18px;
-      font-weight: 500;
+    header {
+      background: linear-gradient(90deg, #18558e 68%, #15b2c1 100%);
+      color: #fff; padding: 34px 22px 18px 22px;
+      border-radius: 0 0 30px 30px;
+      box-shadow: 0 3px 16px #18558e10; text-align: left;
     }
-    .card {
-      background: #eaf3fc;
-      margin-top: 24px;
+    .main-title { font-size: 2.07rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px;}
+    .sub-title { font-size: 1.09rem; opacity: 0.94; font-weight: 400; margin-bottom: 0;}
+    .current-block {
+      margin: 17px 18px 0 18px;
+      padding: 17px 11px;
       border-radius: 12px;
-      box-shadow: 0 2px 16px 0 #bfd2eb38;
-      padding: 28px 24px 16px 24px;
-      display: flex;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      gap: 22px;
+      background: #eaf3fa;
+      box-shadow: 0 2px 8px #cad8e850;
+      display: flex; align-items: center; gap: 14px;
     }
+    .current-icon { width: 68px; height: 68px; object-fit: contain; margin-right: 8px; }
     .current-temp {
-      font-size: 4.1em;
-      font-weight: bold;
-      min-width: 120px;
-      text-align: center;
-      margin-right: 0;
+      font-size: 3.3rem; font-weight: bold; color: #18558e; line-height: 1; margin-bottom: 5px;
     }
-    .current-details {
-      flex: 1;
-      min-width: 180px;
-      font-size: 1.19em;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+    .current-details { flex: 1; }
+    .current-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px;
+      font-size: 1.01rem; margin-top: 2px;
     }
-    .current-icon {
-      width: 64px;
-      height: 64px;
-      display: block;
-      margin-bottom: 8px;
-    }
-    .row {
-      display: flex;
-      gap: 18px;
-    }
-    .row > div {
-      min-width: 120px;
-    }
-    .forecast-cards {
-      display: flex;
-      gap: 9px;
-      overflow-x: auto;
-      margin: 18px 0;
+    .current-label { font-weight: 600; color: #19558e; }
+    .forecast-row {
+      margin: 18px 0 0 0; padding-left: 14px;
+      display: flex; overflow-x: auto; gap: 9px; scrollbar-width: thin;
     }
     .forecast-card {
-      background: #fff;
-      border-radius: 10px;
-      min-width: 100px;
-      box-shadow: 0 1px 7px #bfd2eb2e;
-      padding: 14px 8px 11px 8px;
-      text-align: center;
-      cursor: pointer;
-      font-size: 1em;
-      transition: box-shadow 0.15s;
+      flex: 0 0 140px; background: #f7faff;
+      border-radius: 12px; box-shadow: 0 2px 7px #aac2e660;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 11px 7px 13px 7px; cursor: pointer; transition: box-shadow 0.2s;
+      border: 2px solid transparent; min-width: 110px; max-width: 160px;
     }
-    .forecast-card:hover { box-shadow: 0 3px 16px #2183bc44; }
-    .forecast-card .day { font-weight: 600; }
-    .forecast-card .icon { width: 32px; height: 32px; }
-    .popup-bg {
-      position: fixed; left:0; top:0; width:100vw; height:100vh; background: #0008; z-index: 99; display: flex; align-items: center; justify-content: center;
+    .forecast-card.selected, .forecast-card:hover {
+      border: 2.5px solid #18558e;
+      box-shadow: 0 6px 16px #aac2e680; background: #e2f3ff;
     }
-    .popup {
-      background: #fff;
-      border-radius: 14px;
-      padding: 30px 28px;
-      box-shadow: 0 4px 22px #15304b2a;
-      max-width: 90vw;
-      max-height: 90vh;
-      overflow: auto;
-    }
-    .marine-card {
-      background: #f7fbfe;
-      border-radius: 12px;
-      margin: 32px 0 20px 0;
-      padding: 18px;
-      box-shadow: 0 2px 16px 0 #bfd2eb38;
-      font-size: 1.12em;
-    }
-    .moon-box { margin-top:16px; }
-    @media (max-width: 640px) {
-      .container { padding: 0; }
-      .card, .marine-card { border-radius: 0; }
-      .forecast-cards { margin-left: -5px; margin-right: -5px;}
+    .forecast-icon { width: 44px; height: 44px; margin-bottom: 6px; margin-top: 2px;}
+    .forecast-day { font-weight: 600; font-size: 1.01rem; margin-bottom: 2px; }
+    .forecast-summary { font-size: 0.97rem; margin-bottom: 4px; color: #2857a1; min-height: 18px; text-align: center;}
+    .forecast-temps { font-size: 1.07rem; font-weight: 500; color: #285680; margin-bottom: 1px;}
+    .forecast-rain { font-size: 0.91rem; color: #0a6899; margin-bottom: 0;}
+    .forecast-advice { font-size:0.97em; color:#1a3e2d; min-height:28px; margin-top:2px;}
+    .modal-bg { position: fixed; left:0; top:0; right:0; bottom:0; background: #23324c45; z-index: 50; display: flex; align-items: flex-end; justify-content: center;}
+    .modal-popup { width: 100%; max-width: 470px; background: #fff; border-radius: 22px 22px 0 0; box-shadow: 0 10px 40px #23324c70; padding: 23px 18px 18px 18px; animation: modalIn 0.3s;}
+    @keyframes modalIn { from { transform: translateY(100px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
+    .modal-header { font-size: 1.30rem; font-weight: bold; margin-bottom: 7px; color: #18558e;}
+    .modal-close-btn { position: absolute; top: 18px; right: 23px; background: none; border: none; font-size: 1.7rem; color: #6c7c8c; cursor: pointer; z-index: 100;}
+    .modal-details { margin-top: 6px; font-size: 1.07rem; color: #23415c;}
+    .rain-panel { margin: 18px 18px 0 18px; padding: 12px 12px 10px 12px; border-radius: 10px; background: #ecf8ff; color: #15304b; box-shadow: 0 2px 8px #c8e6ff40; font-size: 1.03rem; line-height: 1.35em;}
+    .rain-label { font-weight: 600; color: #18558e; margin-bottom: 3px; font-size: 1.08rem;}
+    .marine-panel { margin: 24px 18px 0 18px; padding: 13px 13px 17px 13px; border-radius: 12px; background: #eafaf7; box-shadow: 0 2px 7px #bceadd33; color: #18558e; font-size: 1.12rem; font-weight: 500; min-height: 90px;}
+    .marine-headline { font-size: 1.18rem; font-weight: bold; margin-bottom: 7px;}
+    .credit { text-align: center; color: #b4c2d3; font-size: 0.96em; margin: 31px auto 0 auto;}
+    .station-select-row label { font-size: 1em; color: #133958;}
+    @media (max-width: 600px) {
+      .app-container { box-shadow: none; border-radius: 0;}
+      .forecast-row { padding-left: 3px;}
+      .modal-popup { border-radius: 21px 21px 0 0; padding: 11px 6px 17px 7px;}
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="container">
-    <div class="header">The only NZ weather app with real station data &amp; truly practical Kiwi advice</div>
-    <div id="current" class="card"></div>
-    <div id="summaryPhrase" style="margin:16px 0 8px 0;font-size:1.1em;color:#156;">Loading summary...</div>
-    <div class="forecast-cards" id="forecastCards"></div>
-    <div id="marine" class="marine-card"></div>
-    <div class="moon-box" id="moon"></div>
-    <div style="font-size:.94em; color:#888; margin:44px 0 14px 0; text-align:center;">
-      Powered by live NZ station data • 2025 Agora<br>
-      Proudly New Zealand owned &amp; built for Kiwis
+  <div class="app-container">
+    <header>
+      <div class="main-title">Agora NZ Weather</div>
+      <div class="sub-title">NZ weather with live marine, tides & fishing for Thames Coast</div>
+      <div class="station-select-row" style="margin-top:12px;margin-bottom:-4px;">
+        <label for="stationSelect">Station:</label>
+        <select id="stationSelect" disabled>
+          <option value="pws_paeroa" selected>Paeroa (Xweather)</option>
+        </select>
+      </div>
+    </header>
+    <div id="loader" class="loader" style="margin:50px auto 44px auto; border: 7px solid #d7e3f5; border-top: 7px solid #0f82c6; border-radius: 50%; width: 44px; height: 44px; animation: spin 1.05s linear infinite;"></div>
+    <div id="mainContent" style="display:none;">
+      <section><div class="current-block" id="currentBlock"></div></section>
+      <section><div class="forecast-row" id="forecastRow"></div></section>
+      <section><div class="rain-panel" id="rainPanel"></div></section>
+      <section><div class="marine-panel" id="marinePanel">
+        <div style="text-align:center;opacity:.8;margin-bottom:6px">Loading marine/tide chart…</div>
+        <canvas id="tideChart" width="370" height="160"></canvas>
+        <div id="marineDetails"></div>
+      </div></section>
     </div>
+    <div id="modalBg" class="modal-bg" style="display:none;"><div class="modal-popup" id="modalPopup"></div></div>
+    <div class="credit">Powered by Xweather & Agora • 2025<br><span style="font-size:0.89em;opacity:0.8;">Proudly built for NZ</span></div>
   </div>
-  <div id="popupBg" class="popup-bg" style="display:none;"><div class="popup" id="popup"></div></div>
-  <script>
-    // Helper for date
-    function niceDay(dt) {
-      return new Date(dt).toLocaleDateString("en-NZ", {weekday:"short",month:"short",day:"numeric"});
+<script>
+const currentUrl = "https://data.api.xweather.com/conditions/pws_paeroa?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.weather,periods.feelslikeC&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+const forecastUrl = "https://developer.xweather.com/product/api/output?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcHRpb25zIjp7ImxvYyI6eyJ2YWx1ZSI6InB3c19wYWVyb2EiLCJhdXRvIjpmYWxzZX0sImZvcm1hdCI6Impzb24iLCJwYXJhbWV0ZXJzIjp7ImZpbHRlciI6ImRheW5pZ2h0IiwibGltaXQiOjcsImZpZWxkcyI6WyJwZXJpb2RzLmRhdGVUaW1lSVNPIiwibG9jIiwicGVyaW9kcy5wb3AiLCJwZXJpb2RzLnByZWNpcE1NIiwicGVyaW9kcy5taW5EZXdwb2ludEMiLCJwZXJpb2RzLndlYXRoZXIiXX19LCJlbmRwb2ludCI6ImZvcmVjYXN0cyIsImFjdGlvbiI6ImlkIiwiaWF0IjoxNzUzNTE2NTc3fQ.5mDAisIJqg46Pp3XVFxkW4nU-C0uJ8Km52tcqqRCJKk";
+const marineUrl = "https://data.api.xweather.com/maritime/pws_coromandeltown1?filter=1hr&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+let chart = null;
+
+function degToCardinal(deg) {
+  const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  return dirs[Math.round(((deg % 360) / 45)) % 8];
+}
+function getIconUrl(text) {
+  text = (text || "").toLowerCase();
+  if (text.includes('clear') || text.includes('sun')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
+  if (text.includes('cloud')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
+  if (text.includes('rain') || text.includes('shower')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f327.png";
+  if (text.includes('snow')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2744.png";
+  if (text.includes('thunder')) return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
+  return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
+}
+
+async function loadWeatherApp() {
+  document.getElementById('loader').style.display = '';
+  document.getElementById('mainContent').style.display = 'none';
+
+  try {
+    // --- Current
+    const currentRes = await fetch(currentUrl);
+    const currentJson = await currentRes.json();
+    const curr = currentJson.response[0].periods[0];
+    // --- Forecast
+    const forecastRes = await fetch(forecastUrl);
+    const forecastJson = await forecastRes.json();
+    const fPeriods = forecastJson.response[0].periods;
+    // --- Rain panel (just sum precip for last 7 days)
+    let rain7 = 0, rainToday = 0;
+    fPeriods.forEach((p,i)=>{ if(i<7) rain7 += p.precipMM||0; if(i===0) rainToday = p.precipMM||0; });
+
+    renderCurrent(curr);
+    renderForecasts(fPeriods);
+    renderRainPanel(rainToday, rain7);
+
+    // --- Marine/tides
+    renderMarinePanel();
+
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('mainContent').style.display = '';
+  } catch (e) {
+    document.getElementById('loader').innerHTML = "Couldn’t load weather data. Try again soon.";
+    console.error(e);
+  }
+}
+
+function renderCurrent(curr) {
+  let iconUrl = getIconUrl(curr.weather);
+  let windStr = (curr.windSpeedKPH != null)
+    ? `${curr.windSpeedKPH} km/h` + (curr.windDir ? " " + degToCardinal(curr.windDir) : "")
+    : "—";
+  let grid = [
+    ["Humidity", (curr.humidity != null ? Math.round(curr.humidity) + "%" : "—")],
+    ["Feels", (curr.feelslikeC != null ? curr.feelslikeC.toFixed(1) + "°C" : "—")],
+    ["Dew Pt", (curr.dewpointC != null ? curr.dewpointC.toFixed(1) + "°C" : "—")],
+    ["Wind", windStr],
+    ["Wind Dir", (curr.windDir!=null ? degToCardinal(curr.windDir) : "—")],
+    ["Observed", curr.dateTimeISO ? new Date(curr.dateTimeISO).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'}) : "—"]
+  ];
+  let gridHtml = grid.map(([label, val]) =>
+    `<div class="current-label">${label}:</div><div>${val}</div>`
+  ).join("");
+  document.getElementById('currentBlock').innerHTML = `
+    <img class="current-icon" src="${iconUrl}" alt="icon"/>
+    <div>
+      <div class="current-temp">${curr.tempC != null ? curr.tempC.toFixed(1) + "°C" : "—"}</div>
+      <div class="current-details">
+        <div class="current-grid">${gridHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+function formatDay(dateISO) {
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  let d = new Date(dateISO);
+  return days[d.getDay()] + " " + d.getDate();
+}
+
+function renderForecasts(periods) {
+  const row = document.getElementById('forecastRow');
+  row.innerHTML = '';
+  periods.forEach((per, idx) => {
+    const card = document.createElement('div');
+    card.className = 'forecast-card';
+    card.tabIndex = 0;
+    card.setAttribute('aria-label', formatDay(per.dateTimeISO) + ' forecast');
+    card.innerHTML = `
+      <div class="forecast-day">${formatDay(per.dateTimeISO)}</div>
+      <img class="forecast-icon" src="${getIconUrl(per.weather)}" alt="icon"/>
+      <div class="forecast-summary">${per.weather}</div>
+      <div class="forecast-temps">${(per.minDewpointC??'–')}&ndash;${(per.maxDewpointC??'–')}°C</div>
+      <div class="forecast-rain">Rain: ${(per.precipMM??0).toFixed(1)} mm</div>
+    `;
+    card.onclick = () => showForecastDetails(per);
+    row.appendChild(card);
+  });
+}
+
+function showForecastDetails(per) {
+  const modalBg = document.getElementById('modalBg');
+  const popup = document.getElementById('modalPopup');
+  popup.innerHTML = `
+    <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+    <div class="modal-header">${formatDay(per.dateTimeISO)}</div>
+    <div class="modal-details">
+      <img class="forecast-icon" src="${getIconUrl(per.weather)}" alt="icon"/>
+      <b>${per.weather}</b><br>
+      Min/Max Dew Pt: ${(per.minDewpointC??'–')}&ndash;${(per.maxDewpointC??'–')}°C<br>
+      Rain: ${(per.precipMM??0).toFixed(1)} mm<br>
+      POP: ${(per.pop??'–')}%<br>
+      <hr>
+      <span style="font-size:1.04em;">(2-hour breakdown and AI advice coming soon...)</span>
+    </div>
+  `;
+  modalBg.style.display = '';
+  setTimeout(()=>popup.querySelector(".modal-close-btn").focus(), 200);
+}
+function closeModal() { document.getElementById('modalBg').style.display = 'none'; }
+document.getElementById('modalBg').onclick = (e) => {
+  if (e.target === document.getElementById('modalBg')) closeModal();
+};
+
+function renderRainPanel(today, rain7) {
+  document.getElementById('rainPanel').innerHTML = `
+    <span class="rain-label">Rainfall Totals</span><br>
+    Today: <b>${today.toFixed(1)} mm</b><br>
+    Last 7 days: <b>${rain7.toFixed(1)} mm</b>
+    <br><span style="font-size:0.98em;opacity:0.66;">(from forecast totals)</span>
+  `;
+}
+
+// ---- Marine panel & chart ----
+async function renderMarinePanel() {
+  try {
+    const res = await fetch(marineUrl);
+    const data = await res.json();
+    if (!data.success || !data.response.length) {
+      document.getElementById('marinePanel').innerHTML = "No marine/tide data found.";
+      return;
     }
-    function niceHour(dt) {
-      let d = new Date(dt);
-      return d.getHours().toString().padStart(2,"0")+":00";
-    }
+    const periods = data.response[0].periods;
 
-    // Icon map for simplicity (adjust as needed)
-    function getIcon(desc) {
-      desc = (desc||"").toLowerCase();
-      if(desc.includes("sun")) return "☀️";
-      if(desc.includes("cloud")) return "⛅";
-      if(desc.includes("rain") || desc.includes("shower")) return "🌦️";
-      if(desc.includes("storm") || desc.includes("thunder")) return "⛈️";
-      if(desc.includes("fog")) return "🌫️";
-      if(desc.includes("snow")) return "🌨️";
-      return "🌡️";
-    }
+    // Chart Data
+    const labels = periods.map(p => (new Date(p.dateTimeISO)).toLocaleTimeString('en-NZ', {hour:'2-digit',minute:'2-digit'}));
+    const tide = periods.map(p => p.tidesM ?? null);
+    const wave = periods.map(p => p.significantWaveHeightM ?? null);
+    const sst = periods.map(p => p.seaSurfaceTemperatureC ?? null);
 
-    // POPUP
-    function showPopup(html) {
-      document.getElementById("popup").innerHTML = html;
-      document.getElementById("popupBg").style.display = "flex";
-    }
-    document.getElementById("popupBg").onclick = (e)=>{ if(e.target.id==="popupBg") e.target.style.display="none"; };
-
-    // API KEYS & ENDPOINTS
-    const currentURL = "https://data.api.xweather.com/conditions/pws_paeroa?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.weather,periods.feelslikeC&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-    const forecastURL = "https://developer.xweather.com/product/api/output?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcHRpb25zIjp7ImxvYyI6eyJ2YWx1ZSI6InB3c19wYWVyb2EiLCJhdXRvIjpmYWxzZX0sImZvcm1hdCI6Impzb24iLCJwYXJhbWV0ZXJzIjp7ImZpbHRlciI6ImRheW5pZ2h0IiwibGltaXQiOjcsImZpZWxkcyI6WyJwZXJpb2RzLmRhdGVUaW1lSVNPIiwibG9jIiwicGVyaW9kcy5wb3AiLCJwZXJpb2RzLnByZWNpcE1NIiwicGVyaW9kcy5taW5EZXdwb2ludEMiLCJwZXJpb2RzLndlYXRoZXIiXX19LCJlbmRwb2ludCI6ImZvcmVjYXN0cyIsImFjdGlvbiI6ImlkIiwiaWF0IjoxNzUzNTE2NTc3fQ.5mDAisIJqg46Pp3XVFxkW4nU-C0uJ8Km52tcqqRCJKk";
-    const marineURL = "https://data.api.xweather.com/maritime/pws_coromandeltown1?filter=1hr&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-    const summaryURL = "https://data.api.xweather.com/phrases/summary/pws_paeroa?format=json&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-    const moonURL = "https://data.api.xweather.com/sunmoon/pws_paeroa?from=07/26/2025&to=07/27/2025&format=json&fields=dateTimeISO,timestamp,profile,loc,place,sun,moon&client_id=U8feQfLlcEfcXDfsWZs4C&client_secret=HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-
-    // LOAD CURRENT
-    fetch(currentURL)
-      .then(r=>r.json())
-      .then(d=>{
-        let p = d.response[0].periods[0];
-        let icon = getIcon(p.weather);
-        let html = `
-          <div class="current-temp">${Math.round(p.tempC)}°C</div>
-          <div>
-            <div class="current-icon" style="font-size:3.4em;">${icon}</div>
-          </div>
-          <div class="current-details">
-            <div><b>Feels Like:</b> ${Math.round(p.feelslikeC)}°C</div>
-            <div><b>Weather:</b> ${p.weather||"—"}</div>
-            <div><b>Wind:</b> ${p.windSpeedKPH??"—"} km/h ${p.windDir||""}</div>
-            <div><b>Humidity:</b> ${p.humidity??"—"}%</div>
-            <div><b>Dew Point:</b> ${p.dewpointC??"—"}°C</div>
-            <div><b>Time:</b> ${new Date(p.dateTimeISO).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-          </div>
-        `;
-        document.getElementById('current').innerHTML = html;
-      });
-
-    // LOAD SUMMARY PHRASE
-    fetch(summaryURL)
-      .then(r=>r.json())
-      .then(d=>{
-        let t = d.response[0].phrases.shortMET || d.response[0].phrases.short;
-        document.getElementById("summaryPhrase").textContent = t;
-      });
-
-    // LOAD FORECAST
-    let forecastData = [];
-    fetch(forecastURL)
-      .then(r=>r.json())
-      .then(d=>{
-        forecastData = d.response[0].periods;
-        let cards = '';
-        forecastData.forEach((f,i)=>{
-          cards += `
-            <div class="forecast-card" onclick="expandForecast(${i})">
-              <div class="day">${niceDay(f.dateTimeISO)}</div>
-              <div class="icon" style="font-size:2em;">${getIcon(f.weather||"")}</div>
-              <div style="font-size:1.3em;"><b>${Math.round(f.pop||0)}%</b></div>
-              <div>${f.weather||""}</div>
-            </div>
-          `;
-        });
-        document.getElementById('forecastCards').innerHTML = cards;
-      });
-
-    // POPUP FORECAST + 2hrly/AI
-    window.expandForecast = function(idx){
-      let f = forecastData[idx];
-      // Simulate 2-hourly: get details for 12 slots
-      let hoursHtml = '';
-      for (let h=0; h<24; h+=2) {
-        hoursHtml += `<div>${h.toString().padStart(2,'0')}:00 – ${h+2}:00: <b>${Math.round((f.pop||0) * Math.random())}%</b> likely<br></div>`;
+    // Draw Chart.js
+    if (window.chart) window.chart.destroy();
+    window.chart = new Chart(document.getElementById('tideChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: "Tide (m)", data: tide, borderColor: "#1874B0", backgroundColor: "#2196f326", fill: true, tension: 0.3, pointRadius: 2 },
+          { label: "Wave Height (m)", data: wave, borderColor: "#41bc6b", backgroundColor: "#e4fae6", fill: false, tension: 0.3, pointRadius: 2 },
+          { label: "Sea Temp (°C)", data: sst, borderColor: "#f69320", backgroundColor: "#ffe7c2", fill: false, tension: 0.2, yAxisID: 'y1', pointRadius: 2 }
+        ]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: false, title: { display: true, text: 'Tide/Wave (m)' } },
+          y1: { position: 'right', title: { display: true, text: 'Temp (°C)' }, grid: { drawOnChartArea: false } }
+        },
+        plugins: { legend: { position: 'top' }, tooltip: { enabled: true } },
+        responsive: false,
+        maintainAspectRatio: false
       }
-      // Get AI/phrase (simulate, should be real for prod)
-      fetch(summaryURL).then(r=>r.json()).then(d=>{
-        let phrase = d.response[0].phrases.longMET || d.response[0].phrases.long;
-        showPopup(`
-          <h2 style="margin-top:0;">${niceDay(f.dateTimeISO)} Detailed Forecast</h2>
-          <div><b>Main:</b> ${f.weather||"—"}</div>
-          <div><b>Chance of Rain:</b> ${Math.round(f.pop||0)}%</div>
-          <div><b>Min Dew Pt:</b> ${f.minDewpointC||"—"}°C</div>
-          <hr>
-          <div><b>2-Hour Breakdown:</b></div>
-          <div style="font-size:1em; margin-bottom:8px;">${hoursHtml}</div>
-          <div style="margin-top:12px;"><b>AI Advice:</b><br>${phrase}</div>
-        `);
-      });
-    }
+    });
 
-    // LOAD MARINE DATA
-    fetch(marineURL)
-      .then(r=>r.json())
-      .then(d=>{
-        let p = d.response[0].periods[0];
-        let tidesNow = p.tidesM, wave = p.significantWaveHeightM, temp = p.seaSurfaceTemperatureC;
-        let marineHTML = `
-          <div><b>Fishing/Tide &amp; Marine (Coromandel Coast):</b></div>
-          <div>Tide: <b>${tidesNow.toFixed(2)}m</b> • Sea Temp: <b>${temp.toFixed(1)}°C</b> • Wave: <b>${wave.toFixed(2)}m</b></div>
-          <div>Swell: ${p.primarySwellHeightM.toFixed(2)}m @ ${p.primarySwellDir||"—"} (${p.primarySwellPeriod}s) • Wind Wave: ${p.windWaveDir||"—"} ${p.windWavePeriod}s</div>
-        `;
-        document.getElementById('marine').innerHTML = marineHTML;
-      });
+    // Marine Details Table
+    let nextTide = tide.reduce((max, val, idx) => val > (tide[max] ?? -99) ? idx : max, 0);
+    let marineHtml = `
+      <div class="marine-headline">Marine/Tide Details</div>
+      <div style="font-size:0.99em">
+        Next high tide: <b>${labels[nextTide]}</b> at <b>${tide[nextTide].toFixed(2)}m</b><br>
+        Current wave: <b>${wave[0] ? wave[0].toFixed(2) : '–'}m</b>,
+        Sea temp: <b>${sst[0] ? sst[0].toFixed(1) : '–'}°C</b>
+      </div>
+      <div style="font-size:0.97em;opacity:.8;margin-top:7px">
+        <b>Tip:</b> Check the tide chart above for best fishing and boating times!
+      </div>
+    `;
+    document.getElementById('marineDetails').innerHTML = marineHtml;
 
-    // LOAD MOON/SUN
-    fetch(moonURL)
-      .then(r=>r.json())
-      .then(d=>{
-        let m = d.response[0].moon;
-        let sun = d.response[0].sun;
-        let moonHTML = `
-          <div><b>Moon:</b> ${m.phase.name}, ${m.phase.illum}% illuminated
-          • Rise: ${new Date(m.riseISO).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
-          • Set: ${new Date(m.setISO).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-          <div><b>Sunrise:</b> ${new Date(sun.riseISO).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} • <b>Sunset:</b> ${new Date(sun.setISO).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-        `;
-        document.getElementById("moon").innerHTML = moonHTML;
-      });
-  </script>
+  } catch (e) {
+    document.getElementById('marinePanel').innerHTML = "Failed to load marine/tide data.";
+    console.error(e);
+  }
+}
+
+// Run on page load
+window.onload = loadWeatherApp;
+</script>
 </body>
 </html>
