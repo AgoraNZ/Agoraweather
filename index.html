@@ -5,6 +5,7 @@
   <title>Agora NZ Weather – Smarter Kiwi Weather App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="description" content="The only weather app built on real NZ station data with uniquely Kiwi weather advice."/>
+  <link rel="manifest" href="manifest.json">
   <style>
     body { margin: 0; padding: 0; background: #f4f7fb; font-family: 'Segoe UI', Arial, sans-serif; color: #15304b; min-height: 100vh;}
     .app-container { max-width: 500px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 5px 30px #193a5e18; padding-bottom: 34px; min-height: 100vh; display: flex; flex-direction: column;}
@@ -81,9 +82,9 @@
     // --- CONFIG
     const client_id = "U8feQfLlcEfcXDfsWZs4C";
     const client_secret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
-    // Current obs: add windGustKPH, visibilityKM, clouds
+    // Add all possible current obs fields needed (wind gust, clouds, visibility)
     const CURRENT_URL = `https://data.api.xweather.com/conditions/pws_paeroa?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windGustKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.visibilityKM,periods.clouds&client_id=${client_id}&client_secret=${client_secret}`;
-    // Forecast (tokenized, as provided)
+    // Forecast
     const FORECAST_URL = `https://developer.xweather.com/product/api/output?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcHRpb25zIjp7ImxvYyI6eyJ2YWx1ZSI6InB3c19wYWVyb2EiLCJhdXRvIjpmYWxzZX0sImZvcm1hdCI6Impzb24iLCJwYXJhbWV0ZXJzIjp7ImZpbHRlciI6ImRheW5pZ2h0IiwibGltaXQiOjcsImZpZWxkcyI6WyJwZXJpb2RzLmRhdGVUaW1lSVNPIiwibG9jIiwicGVyaW9kcy5wb3AiLCJwZXJpb2RzLnByZWNpcE1NIiwicGVyaW9kcy5taW5EZXdwb2ludEMiLCJwZXJpb2RzLndlYXRoZXIiXX19LCJlbmRwb2ludCI6ImZvcmVjYXN0cyIsImFjdGlvbiI6ImlkIiwiaWF0IjoxNzUzNTE2NTc3fQ.5mDAisIJqg46Pp3XVFxkW4nU-C0uJ8Km52tcqqRCJKk`;
     // Summary/phrases
     const PHRASES_URL = `https://data.api.xweather.com/phrases/summary/pws_paeroa?format=json&client_id=${client_id}&client_secret=${client_secret}`;
@@ -141,7 +142,7 @@
         renderAdvice(phraseObj, moonToday);
         renderForecasts(forecastPeriods);
         renderRainPanel(forecastPeriods);
-        await renderFishingPanel(moonToday, phraseObj);
+        await renderFishingPanel(moonToday);
         document.getElementById('loader').style.display = 'none';
         document.getElementById('mainContent').style.display = '';
       } catch (e) {
@@ -162,7 +163,7 @@
       // Moon phase as icon under weather icon
       let moonIcon = "";
       let moonPhase = moonToday && moonToday.moon && moonToday.moon.phase && moonToday.moon.phase.name;
-      if (moonPhase) moonIcon = `<span class="moon-icon" title="${moonPhase}" style="font-size:2.1em;">${moonPhaseIcon(moonPhase)}</span>`;
+      if (moonPhase) moonIcon = `<span class="moon-icon" title="${moonPhase}" style="font-size:2.2em; display:block; text-align:center;">${moonPhaseIcon(moonPhase)}</span>`;
       document.getElementById('currentBlock').innerHTML = `
         <div class="current-icon-stack">
           <img class="current-icon" src="${iconUrl}" alt="icon"/>
@@ -228,7 +229,7 @@
       `;
     }
 
-    async function renderFishingPanel(moonToday, phrases) {
+    async function renderFishingPanel(moonToday) {
       const panel = document.getElementById('fishingPanel');
       // Tide chart image and moon info
       let tideHtml = `
