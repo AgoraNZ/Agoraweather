@@ -16,10 +16,11 @@
     select, button { font-size:1rem; padding:5px 10px; border-radius:6px; border:1px solid #18558e; background:#f4f7fb; color:#1c293a; font-family:inherit;}
     select:disabled { background:#e7eaf3; color:#888;}
     .current-block { margin:17px 18px 0 18px; padding:17px 11px; border-radius:12px; background:#eaf3fa; box-shadow:0 2px 8px #cad8e850; display:flex; align-items:center; gap:18px;}
-    .current-icon { width:70px; height:70px; object-fit:contain; background:#fff; border-radius:50%; border:2.5px solid #18558e; padding:8px; box-shadow:0 0 8px #18558e18; margin-right:0;}
-    .current-details { flex:1; display:flex; flex-direction:column;}
-    .current-temp-big { font-size:3.3rem; font-weight:bold; color:#16549b; margin:5px 0 7px 0; line-height:1;}
-    .current-temp-label { font-size:1.13rem; color:#35526b; margin-top:-4px; margin-bottom:8px;}
+    .current-left { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:100px;}
+    .current-icon { width:70px; height:70px; object-fit:contain; background:#fff; border-radius:50%; border:2.5px solid #18558e; padding:8px; box-shadow:0 0 8px #18558e18; }
+    .current-temp-big { font-size:3.0rem; font-weight:700; color:#16549b; line-height:1; }
+    .current-details { flex:1; display:flex; flex-direction:column; }
+    .current-temp-label { font-size:1.13rem; color:#35526b; margin-top:-2px; margin-bottom:8px;}
     .current-grid { display:flex; flex-wrap:wrap; margin-top:6px;}
     .current-field { width:48%; min-width:160px; font-size:0.99rem; margin-bottom:4px;}
     .current-label { font-weight:bold; color:#19558e;}
@@ -41,14 +42,21 @@
     .modal-details { margin-top:6px; font-size:1.07rem; color:#23415c;}
     .rain-panel { margin:18px 18px 0 18px; padding:12px 12px 10px 12px; border-radius:10px; background:#ecf8ff; color:#15304b; box-shadow:0 2px 8px #c8e6ff40; font-size:1.03rem; line-height:1.35em;}
     .rain-label { font-weight:600; color:#18558e; margin-bottom:3px; font-size:1.08rem;}
-    .fishing-panel { margin:25px 18px 0 18px; padding:14px 14px 12px 14px; border-radius:12px; background:#eafaf7; box-shadow:0 2px 7px #bceadd33; color:#18558e; font-size:1.12rem; font-weight:500; min-height:50px;}
+    .fishing-panel { margin:25px 18px 0 18px; padding:14px 14px 12px 14px; border-radius:12px; background:#eafaf7; box-shadow:0 2px 7px #bceadd33; color:#18558e; font-size:1.02rem; font-weight:500; min-height:50px;}
     .fish-headline { font-size:1.18rem; font-weight:bold; margin-bottom:6px;}
-    .fish-tips { font-size:1.04rem; margin-top:7px; color:#217b6a;}
+    .fish-switch { display:flex; align-items:center; gap:10px; margin:6px 0 8px 0; }
+    .switch { position:relative; display:inline-block; width:54px; height:28px;}
+    .switch input { display:none;}
+    .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#cfeee7; transition:.2s; border-radius:28px;}
+    .slider:before { position:absolute; content:""; height:22px; width:22px; left:3px; top:3px; background:white; transition:.2s; border-radius:50%; box-shadow:0 1px 4px #0003; }
+    input:checked + .slider { background:#85d7c5;}
+    input:checked + .slider:before { transform:translateX(26px); }
+    .fish-rating { margin-top:6px; font-weight:700;}
+    .fish-note { font-size:0.95em; color:#217b6a; margin-top:4px;}
     .fish-swell { margin:12px 0; text-align:center;}
     .fish-swell img { width:100%; max-width:320px; border-radius:6px; box-shadow:0 2px 12px #2684c222;}
     .tide-table { width:100%; border-collapse:separate; border-spacing:0 6px; font-size:0.98rem;}
     .tide-table th { text-align:left; color:#0f5c57; font-weight:700;}
-    .tide-row { background:#f3fffb; border:1px solid #bfeee3; border-radius:8px; padding:6px 10px; display:flex; justify-content:space-between; margin:6px 0;}
     .tide-note { font-size:0.92em; color:#2f6d65; margin-top:6px;}
     @media (max-width:600px){ .app-container{ box-shadow:none; border-radius:0;} .forecast-row{ padding-left:3px;} .modal-popup{ border-radius:21px 21px 0 0; padding:11px 6px 17px 7px;} }
     .loader { margin:60px auto 34px auto; border:7px solid #d7e3f5; border-top:7px solid #0f82c6; border-radius:50%; width:44px; height:44px; animation:spin 1.05s linear infinite;}
@@ -87,13 +95,29 @@
 
   <script>
     // ---------------- CONFIG
-    const wuStationId = "IPAERO15"; // Weather Underground PWS for live telemetry
+    const wuStationId = "IPAERO15"; // WU PWS for live telemetry
     const wuApiKey    = "17815bdf5f234a62815bdf5f239a6209";
 
-    // XWeather / Aeris (Paeroa)
-    const xwStationId     = "pws_paeroa";
+    const xwStationId     = "pws_paeroa"; // XWeather station for forecasts/history/etc
     const apiClientId     = "U8feQfLlcEfcXDfsWZs4C";
     const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+
+    // Fishing locations toggle (IDs may not exist for every provider; we degrade gracefully)
+    const fishingSites = {
+      coromandel: {
+        label: "Coromandel",
+        maritimeId: "pws_coromandeltown1",
+        swellSlug: "thames",          // Swellmap slug
+        altLink: "https://www.swellmap.com/surf/forecast/thames"
+      },
+      whangapoua: {
+        label: "Whangapoua",
+        maritimeId: "pws_whangapoua1", // if not found, we’ll fall back silently
+        swellSlug: "whangapoua",
+        altLink: "https://www.swellmap.com/surf/forecast/whangapoua"
+      }
+    };
+    let activeFishingKey = "coromandel";
 
     // ---------------- HELPERS
     const $ = (id)=>document.getElementById(id);
@@ -130,16 +154,14 @@
     function getXWPhrasesUrl(id){
       return `https://data.api.xweather.com/phrases/summary/${id}?format=json&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
-    // 14-day Sun/Moon window
     function getXWSunMoonRangeUrl(id, days=14){
       const t0 = new Date(); const t1 = new Date(t0.getTime()+ (days-1)*86400000);
       const mdy = d => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
       return `https://data.api.xweather.com/sunmoon/${id}?from=${mdy(t0)}&to=${mdy(t1)}&format=json&fields=dateTimeISO,timestamp,profile,loc,place,sun,moon&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
-    function getXWMaritimeUrl(){ // optional marine snapshot
-      return `https://data.api.xweather.com/maritime/pws_coromandeltown1?filter=1hr&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
+    function getXWMaritimeUrl(maritimeId){
+      return `https://data.api.xweather.com/maritime/${maritimeId}?filter=1hr&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
     }
-
     function getIconUrl(per){
       const icon = per?.icon;
       if (icon) return `https://cdn.aerisapi.com/wxblox/icons/${icon}`;
@@ -153,6 +175,8 @@
     }
 
     let pressureBuf = []; // {time,value}
+    let forecastPeriods = [];
+    let sunMoonDays = [];
 
     window.onload = loadWeatherApp;
 
@@ -189,18 +213,17 @@
           pressureBuf = pressureBuf.filter(p => (current.obsEpoch - p.time) < 3*3600*1000);
         }
 
-        // Forecast, phrases, history, sun/moon (14d), maritime
-        const [fcRes, phrRes, hisRes, smRes, marRes] = await Promise.allSettled([
+        // Forecast, phrases, history, sun/moon (14d)
+        const [fcRes, phrRes, hisRes, smRes] = await Promise.allSettled([
           fetch(getXWForecastUrlById(xwStationId)),
           fetch(getXWPhrasesUrl(xwStationId)),
           fetch(getXWHistoryUrlById(xwStationId)),
-          fetch(getXWSunMoonRangeUrl(xwStationId, 14)),
-          fetch(getXWMaritimeUrl())
+          fetch(getXWSunMoonRangeUrl(xwStationId, 14))
         ]);
 
         const fcJson = (fcRes.status==='fulfilled') ? await fcRes.value.json() : null;
-        const periods = fcJson?.response?.[0]?.periods || [];
-        const todayFc = periods[0] || {};
+        forecastPeriods = fcJson?.response?.[0]?.periods || [];
+        const todayFc = forecastPeriods[0] || {};
         current.sunrise = todayFc.sunriseISO || null;
         current.sunset  = todayFc.sunsetISO  || null;
         current.uv      = (current.uv != null) ? current.uv : (todayFc.uvi ?? null);
@@ -208,18 +231,17 @@
         const phrJson = (phrRes.status==='fulfilled') ? await phrRes.value.json() : null;
         const phraseText = phrJson?.response?.[0]?.phrases?.longMET || phrJson?.response?.[0]?.phrases?.shortMET || null;
 
-        const rainTotals = await computeRainTotals(hisRes, current.precipTotalToday, periods);
+        const rainTotals = await computeRainTotals(hisRes, current.precipTotalToday, forecastPeriods);
 
         const smJson = (smRes.status==='fulfilled') ? await smRes.value.json() : null;
-        const sunMoonDays = smJson?.response || [];
+        sunMoonDays = smJson?.response || [];
 
-        const marJson = (marRes.status==='fulfilled') ? await marRes.value.json() : null;
-
+        // Render everything
         renderCurrent(current, todayFc);
         renderAdvice(current, todayFc, rainTotals.today, rainTotals.yesterday, phraseText);
-        renderForecasts(periods);
+        renderForecasts(forecastPeriods);
         renderRainPanel(rainTotals);
-        renderTidesFishingPanel(sunMoonDays, marJson);
+        await renderFishingPanel(); // uses activeFishingKey, forecastPeriods, sunMoonDays
 
         $('loader').style.display='none';
         $('mainContent').style.display='';
@@ -264,10 +286,12 @@
       const gridHtml = grid.map(([label,val])=>`<div class="current-field"><span class="current-label">${label}:</span> ${val}</div>`).join("");
 
       $('currentBlock').innerHTML = `
-        <img class="current-icon" src="${iconUrl}" alt="icon"/>
-        <div class="current-details">
+        <div class="current-left">
+          <img class="current-icon" src="${iconUrl}" alt="icon"/>
           <div class="current-temp-big">${(p.temp != null) ? to1(p.temp)+"°C" : "—"}</div>
-          <div class="current-temp-label">Current temperature</div>
+        </div>
+        <div class="current-details">
+          <div class="current-temp-label">Current conditions</div>
           <div class="current-grid">${gridHtml}</div>
         </div>`;
     }
@@ -287,23 +311,28 @@
 
     function renderForecasts(periods){
       const row = $('forecastRow'); row.innerHTML = '';
-      periods.forEach((per)=>{
+      periods.forEach((per, idx)=>{
         const advice = (String(per.weather||'').toLowerCase().includes('rain')) ? "Rain likely, take a jacket." : "Settled conditions.";
         const windDirStr = (per.windDirMax != null) ? degToCardinal(per.windDirMax) : "";
-        row.insertAdjacentHTML('beforeend', `
-          <div class="forecast-card" onclick='showForecastDetails(${JSON.stringify(per).replace(/'/g,"&#39;")}, ${JSON.stringify(advice).replace(/'/g,"&#39;")})' tabindex="0" aria-label="${fmtDay(per.dateTimeISO)} forecast">
-            <div class="forecast-day">${fmtDay(per.dateTimeISO)}</div>
-            <img class="forecast-icon" src="${getIconUrl(per)}" alt="icon"/>
-            <div class="forecast-summary">${per.weather || "—"}</div>
-            <div class="forecast-temps">${to1(per.minTempC)}–${to1(per.maxTempC)}°C</div>
-            <div class="forecast-rain">Rain: ${to1(per.precipMM)} mm • POP ${per.pop ?? "–"}%</div>
-            <div style="font-size:0.92em;color:#448;">Wind: ${per.windSpeedMaxKPH ?? "–"} km/h ${windDirStr}</div>
-            <div class="forecast-advice">${advice}</div>
-          </div>`);
+        const card = document.createElement('div');
+        card.className = 'forecast-card';
+        card.dataset.index = String(idx);
+        card.innerHTML = `
+          <div class="forecast-day">${fmtDay(per.dateTimeISO)}</div>
+          <img class="forecast-icon" src="${getIconUrl(per)}" alt="icon"/>
+          <div class="forecast-summary">${per.weather || "—"}</div>
+          <div class="forecast-temps">${to1(per.minTempC)}–${to1(per.maxTempC)}°C</div>
+          <div class="forecast-rain">Rain: ${to1(per.precipMM)} mm • POP ${per.pop ?? "–"}%</div>
+          <div style="font-size:0.92em;color:#448;">Wind: ${per.windSpeedMaxKPH ?? "–"} km/h ${windDirStr}</div>
+          <div class="forecast-advice">${advice}</div>`;
+        card.addEventListener('click', ()=>showForecastDetails(idx));
+        row.appendChild(card);
       });
     }
 
-    function showForecastDetails(per, advice){
+    function showForecastDetails(index){
+      const per = forecastPeriods[index];
+      const advice = (String(per.weather||'').toLowerCase().includes('rain')) ? "Rain likely, take a jacket." : "Settled conditions.";
       const popup = $('modalPopup');
       popup.innerHTML = `
         <button class="modal-close-btn" onclick="closeModal()">&times;</button>
@@ -361,10 +390,34 @@
       return {today,yesterday,last7,last30,ytd};
     }
 
-    async function renderTidesFishingPanel(sunMoonDays, maritime){
+    // ---------- Fishing / Tides Panel (with switch)
+    async function renderFishingPanel(){
       const panel = $('fishingPanel');
+      const site = fishingSites[activeFishingKey];
 
-      // Build 14-day approximate tide windows from moon events
+      // Header + switch UI
+      panel.innerHTML = `
+        <div class="fish-headline">Fishing, Tides & Swell</div>
+        <div class="fish-switch">
+          <span>Coromandel</span>
+          <label class="switch">
+            <input id="fishToggle" type="checkbox" ${activeFishingKey==='whangapoua'?'checked':''}>
+            <span class="slider"></span>
+          </label>
+          <span>Whangapoua</span>
+        </div>
+        <div id="fishRating" class="fish-rating"></div>
+        <div id="fishNote" class="fish-note"></div>
+        <div id="fishMarine"></div>
+        <div id="tideWrap"></div>
+        <div id="swellWrap" class="fish-swell"></div>
+      `;
+      $('fishToggle').addEventListener('change', async (e)=>{
+        activeFishingKey = e.target.checked ? 'whangapoua' : 'coromandel';
+        await renderFishingPanel(); // re-render for the other site
+      });
+
+      // Build 14-day approximate tide windows from moon events (already in sunMoonDays)
       const approxRows = (sunMoonDays||[]).map(entry=>{
         const dISO = entry.dateTimeISO.slice(0,10);
         const m = entry.moon || {};
@@ -374,37 +427,85 @@
         const dayTxt= new Date(dISO).toLocaleDateString('en-NZ',{weekday:'short', month:'short', day:'numeric'});
         return `<tr><td style="padding:6px 4px;">${dayTxt}</td><td style="padding:6px 4px;">${highs}</td><td style="padding:6px 4px;">${lows}</td><td style="padding:6px 4px;">${phase}</td></tr>`;
       }).join('');
+      $('tideWrap').innerHTML = `
+        <table class="tide-table">
+          <thead><tr><th>Day</th><th>High (approx)</th><th>Low (approx)</th><th>Moon</th></tr></thead>
+          <tbody>${approxRows}</tbody>
+        </table>
+        <div class="tide-note">*Approximate tide windows are inferred from moon transit/underfoot (highs) and moonrise/set (lows). Use official tide tables for navigation.</div>
+      `;
 
-      // Optional marine snapshot
-      let marineHtml = '';
+      // Marine snapshot from XWeather Maritime (if available for site)
       try {
-        const mPer = maritime?.response?.[0]?.periods?.[0] || maritime?.response?.[0] || null;
+        const marRes = await fetch(getXWMaritimeUrl(site.maritimeId));
+        const marJson = await marRes.json();
+        const mPer = marJson?.response?.[0]?.periods?.[0] || marJson?.response?.[0] || null;
         if (mPer) {
           const waveM = mPer.waveHeightM ?? mPer.waveHeight ?? null;
           const swlP  = mPer.swellPeriodS ?? mPer.swellPeriod ?? null;
           const swlD  = mPer.swellDir ?? null;
           const wind  = mPer.windSpeedKTS ?? mPer.windSpeedKPH ?? null;
-          marineHtml = `<div class="fish-tips">Marine (Coromandel Town, ~1hr): Wave ${waveM!=null?to1(waveM):"–"} m, Swell ${swlP!=null?to1(swlP):"–"} s ${swlD? '('+swlD+')':''}, Wind ${wind!=null?to1(wind):"–"} ${mPer.windSpeedKTS!=null?'kt':'km/h'}</div>`;
+          $('fishMarine').innerHTML = `Marine (${site.label}, ~1hr): Wave ${waveM!=null?to1(waveM):"–"} m, Swell ${swlP!=null?to1(swlP):"–"} s ${swlD? '('+swlD+')':''}, Wind ${wind!=null?to1(wind):"–"} ${mPer.windSpeedKTS!=null?'kt':'km/h'}`;
+          // Use these values + forecast to rate fishing
+          const rating = rateFishing(forecastPeriods[0]||{}, {waveM, swlP, windKts: mPer.windSpeedKTS, windKph: mPer.windSpeedKPH});
+          $('fishRating').textContent = `Fishing: ${rating.label}`;
+          $('fishRating').style.color = rating.color;
+          $('fishNote').textContent = rating.note;
+        } else {
+          // fallback rating from forecast only
+          const rating = rateFishing(forecastPeriods[0]||{}, null);
+          $('fishRating').textContent = `Fishing: ${rating.label}`;
+          $('fishRating').style.color = rating.color;
+          $('fishNote').textContent = rating.note;
         }
-      } catch {}
+      } catch {
+        const rating = rateFishing(forecastPeriods[0]||{}, null);
+        $('fishRating').textContent = `Fishing: ${rating.label}`;
+        $('fishRating').style.color = rating.color;
+        $('fishNote').textContent = rating.note;
+      }
 
-      const swellHtml = `
-        <div class="fish-swell">
-          <a href="https://www.swellmap.com/surf/forecast/thames" target="_blank" rel="noopener">
-            <img src="https://www.swellmap.com/static/surf/forecasts/thames/thames-surf-forecast-large.png" alt="Thames Swell Map"/><br>
-            <span style="font-size:0.98em;">Open full Swellmap Thames</span>
-          </a>
-        </div>`;
+      // Swell image / link (graceful fallback)
+      const img = document.createElement('img');
+      img.alt = `${site.label} Swell`;
+      img.src = `https://www.swellmap.com/static/surf/forecasts/${site.swellSlug}/${site.swellSlug}-surf-forecast-large.png`;
+      img.onerror = ()=>{ $('swellWrap').innerHTML = `<a href="${site.altLink}" target="_blank" rel="noopener">Open Swellmap for ${site.label}</a>`; };
+      $('swellWrap').innerHTML = '';
+      $('swellWrap').appendChild(img);
+    }
 
-      panel.innerHTML = `
-        <div class="fish-headline">Thames Coast – Approx Tides (14 days), Moon & Swell</div>
-        ${marineHtml}
-        <table class="tide-table">
-          <thead><tr><th>Day</th><th>High (approx)</th><th>Low (approx)</th><th>Moon</th></tr></thead>
-          <tbody>${approxRows}</tbody>
-        </table>
-        <div class="tide-note">*Approximate tide windows are inferred from moon transit/underfoot (highs) and moonrise/set (lows). Local offsets apply; use official tide tables for navigation.</div>
-        ${swellHtml}`;
+    // Simple AI-ish fishing rater (short & explainy):
+    // Inputs: forecast (POP, wind, precip), optional marine (wave height, swell period, wind)
+    function rateFishing(f, marine){
+      const pop = Number(f?.pop ?? 0);
+      const wind = Number(f?.windSpeedMaxKPH ?? 0);
+      const wave = marine && marine.waveM!=null ? Number(marine.waveM) : null;
+      const swellP = marine && marine.swlP!=null ? Number(marine.swlP) : null;
+
+      let score = 0;
+      // wind (km/h): <10 best, 10-20 ok, >25 poor
+      if (wind < 10) score += 2; else if (wind <= 20) score += 1; else if (wind > 25) score -= 2; else score -= 1;
+      // rain chance
+      if (pop <= 20) score += 2; else if (pop <= 50) score += 0; else score -= 2;
+      // wave height (m): best <=1.0, ok 1-1.5, poor >2
+      if (wave!=null) {
+        if (wave <= 1.0) score += 2;
+        else if (wave <= 1.5) score += 1;
+        else if (wave > 2) score -= 2;
+        else score -= 1;
+      }
+      // swell period (s): >10 good, 7-10 fair, <7 messy
+      if (swellP!=null) {
+        if (swellP > 10) score += 1;
+        else if (swellP < 7) score -= 1;
+      }
+
+      let label = "Fair", color = "#2a7f62", note = "Mixed conditions.";
+      if (score <= -1) { label = "Bad"; color = "#c0392b"; note = "Strong wind or messy swell; sheltered spots only."; }
+      else if (score <= 1) { label = "Fair"; color = "#e67e22"; note = "Usable windows; pick calmer periods."; }
+      else if (score <= 3) { label = "Good"; color = "#27ae60"; note = "Light winds and manageable swell."; }
+      else { label = "Excellent"; color = "#2ecc71"; note = "Calm winds, low seas; prime bite times around tide changes."; }
+      return {label, color, note};
     }
   </script>
 </body>
