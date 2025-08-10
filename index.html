@@ -11,7 +11,6 @@
   header{background:linear-gradient(90deg,#18558e 68%,#15b2c1 100%);color:#fff;padding:34px 22px 18px;border-radius:0 0 30px 30px;box-shadow:0 3px 16px #18558e10}
   .main-title{font-size:2.07rem;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
   .sub-title{font-size:1.04rem;opacity:.94;margin:2px 0 0}
-
   .station-select-row{display:flex;align-items:center;gap:9px;margin:14px 0 7px}
   select{font-size:1rem;padding:5px 10px;border-radius:6px;border:1px solid #18558e;background:#f4f7fb;color:#1c293a}
   select:disabled{background:#e7eaf3;color:#888}
@@ -46,7 +45,7 @@
   .modal-header{font-size:1.22rem;font-weight:700;margin-bottom:8px;color:#18558e}
   .modal-close-btn{position:absolute;top:18px;right:23px;background:none;border:none;font-size:1.7rem;color:#6c7c8c;cursor:pointer;z-index:100}
   .modal-details{margin-top:6px;font-size:1.03rem;color:#23415c}
-  .hourly-grid{margin-top:10px;border-top:1px solid #e8eef8;padding-top:8px;max-height:400px;overflow:auto}
+  .hourly-grid{margin-top:10px;border-top:1px solid #e8eef8;padding-top:8px;max-height:420px;overflow:auto}
   .hour-row{display:flex;align-items:center;justify-content:space-between;padding:6px 4px;border-radius:8px}
   .hour-row:nth-child(odd){background:#f5f9ff}
   .h-left{display:flex;align-items:center;gap:10px}
@@ -58,7 +57,7 @@
   .rain-panel{margin:18px 18px 0;padding:12px;border-radius:10px;background:#ecf8ff;color:#15304b;box-shadow:0 2px 8px #c8e6ff40;font-size:1.03rem;line-height:1.35}
   .rain-label{font-weight:600;color:#18558e;margin-bottom:3px;font-size:1.08rem}
 
-  .fishing-panel{margin:25px 18px 0;padding:14px;border-radius:12px;background:#eafaf7;box-shadow:0 2px 7px #bceadd33;color:#18558e;font-size:1.02rem;font-weight:500}
+  .fishing-panel{margin:25px 18px 0;padding:14px;border-radius:12px;background:#eafaf7;box-shadow:0 2px 7px #bceadd33;color:#18558e;font-size:1.02rem}
   .fish-headline{font-size:1.18rem;font-weight:700;margin-bottom:6px}
   .fish-switch{display:flex;align-items:center;gap:10px;margin:6px 0 8px}
   .switch{position:relative;display:inline-block;width:54px;height:28px}
@@ -77,7 +76,6 @@
   .loader{margin:60px auto 34px;border:7px solid #d7e3f5;border-top:7px solid #0f82c6;border-radius:50%;width:44px;height:44px;animation:spin 1.05s linear infinite}
   @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
   .credit{text-align:center;color:#b4c2d3;font-size:.96em;margin:31px auto 0}
-  @media (max-width:600px){.app-container{box-shadow:none;border-radius:0}.forecast-row{padding-left:3px}.modal-popup{border-radius:21px 21px 0 0;padding:11px 6px 17px}}
 </style>
 </head>
 <body>
@@ -86,10 +84,8 @@
       <div class="main-title">Agora NZ Weather</div>
       <div class="sub-title">Real station data • clear, practical NZ advice</div>
       <div class="station-select-row">
-        <label for="stationSelect">Station:</label>
-        <select id="stationSelect" disabled>
-          <option selected>Paeroa (Actual Station – WU)</option>
-        </select>
+        <label>Station:</label>
+        <select disabled><option>Paeroa (Actual Station – WU)</option></select>
       </div>
     </header>
 
@@ -115,143 +111,88 @@
 
 <script>
 /* =================== CONFIG =================== */
-const wuStationMain = "IPAERO15";  // Paeroa (for current panel)
-const wuStationWhangapoua = "IMATAR74"; // <- requested station for Whangapoua ratings
-const wuApiKey = "17815bdf5f234a62815bdf5f239a6209";
+const WU_MAIN   = "IPAERO15";   // Paeroa (main panel)
+const WU_CORO   = "IWAIOMU2";   // Coromandel (fishing/tides context)
+const WU_WHANGA = "IMATAR74";   // Whangapoua (fishing/tides context)
+const WU_KEY    = "17815bdf5f234a62815bdf5f239a6209";
 
-const xwStationId = "pws_paeroa";
-const apiClientId = "U8feQfLlcEfcXDfsWZs4C";
-const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
+const XW_STATION = "pws_paeroa";
+const XW_ID = "U8feQfLlcEfcXDfsWZs4C";
+const XW_SECRET = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
 
-/* Coast coordinates for “closest maritime” lookups */
-const siteCoords = {
-  coromandel: {lat:-36.760, long:175.500},
-  whangapoua: {lat:-36.720, long:175.670}
+const WORLDTIDES_KEY = "e29bf187-08ef-4cc0-abf9-95ef021e7c7c";
+const COAST = {
+  coromandel: { label:"Coromandel",  lat:-36.760, lon:175.500, wu:WU_CORO },
+  whangapoua:{ label:"Whangapoua", lat:-36.723, lon:175.627, wu:WU_WHANGA }
 };
-/* Tide-like windows from moon (distinct coast offsets) */
-const tideOffsets = {
-  coromandel: {high:+0,  low:+0},
-  whangapoua: {high:+25, low:+10}
-};
-/* Which maritime / swell site names to show */
-const fishingSites = {
-  coromandel:  { label:"Coromandel", maritimeId:"pws_coromandeltown1", swellSlug:"thames",      altLink:"https://www.swellmap.com/surf/forecast/thames" },
-  whangapoua:  { label:"Whangapoua", maritimeId:"",                       swellSlug:"whangapoua", altLink:"https://www.swellmap.com/surf/forecast/whangapoua" }
-};
-let activeFishingKey = "coromandel";
+let activeCoast = "coromandel";
 
-/* =================== HELPERS =================== */
-const $ = id => document.getElementById(id);
-const to1 = v => (v==null||isNaN(v))?"—":Number(v).toFixed(1);
+/* =================== UTILS =================== */
+const $ = id=>document.getElementById(id);
+const to1=v=>(v==null||isNaN(v))?"—":Number(v).toFixed(1);
 const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const fmtDay = iso => {const d=new Date(iso);return `${days[d.getDay()]} ${d.getDate()}`};
 const fmtFull = iso => new Date(iso).toLocaleDateString("en-NZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 const safeHM = iso => { if(!iso) return "—"; const d=new Date(iso); return isNaN(d)?"—":d.toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) };
-function degToCardinal(deg){ if(deg==null||isNaN(deg))return ""; const dirs=["N","NE","E","SE","S","SW","W","NW"]; return dirs[Math.round(((deg%360)/45))%8]; }
-function iconUrl(per){
-  const i=per?.icon; if(i) return `https://cdn.aerisapi.com/wxblox/icons/${i}`;
-  const p=(per?.weather&&(per.weather.phrase||per.weather))||"";
-  if(/Sunny|Clear/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";
-  if(/Cloud/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";
-  if(/Rain|Showers/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f327.png";
-  if(/Thunder|Storm/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";
-  return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";
-}
-function localISO(date, tz="Pacific/Auckland"){
-  const p = new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
-  const o = Object.fromEntries(p.map(x=>[x.type,x.value]));
-  return `${o.year}-${o.month}-${o.day}`;
-}
-function simpleMoonName(name, illum){
-  const i = Number(illum||0), n=(name||"").toLowerCase();
-  if (i <= 5) return "new moon";
-  if (i >= 95) return "full moon";
-  if (i>=45 && i<=55) return n.includes('wax') ? "first quarter" : (n.includes('wan') ? "last quarter" : "half");
-  return n.includes('wax') ? "waxing" : (n.includes('wan') ? "waning" : (i<50?"waxing":"waning"));
-}
-const timeout = ms=>new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms));
-const safeJson = async (res)=>{ if(!res||!res.ok) throw new Error('http'); return res.json(); };
+function degToCardinal(deg){ if (deg==null||isNaN(deg)) return ""; const dirs=["N","NE","E","SE","S","SW","W","NW"]; return dirs[Math.round(((deg%360)/45))%8]; }
+function iconUrl(per){const i=per?.icon;if(i)return`https://cdn.aerisapi.com/wxblox/icons/${i}`;const p=(per?.weather&&(per.weather.phrase||per.weather))||"";if(/Sunny|Clear/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2600.png";if(/Cloud/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png";if(/Rain|Shower/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f327.png";if(/Thunder|Storm/i.test(p))return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c8.png";return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26c5.png";}
+const timeout=ms=>new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms));
+const safeJson = async r=>{ if(!r||!r.ok) throw new Error('http'); return r.json(); };
 const get = (url,ms=12000)=>Promise.race([fetch(url),timeout(ms)]).then(safeJson).catch(()=>null);
-function firstNum(arr){ for(const v of arr){ if(v!=null && !isNaN(Number(v))) return Number(v); } return null; }
+function firstNum(a){for(const v of a){if(v!=null&& !isNaN(Number(v)))return Number(v);}return null;}
+function localISO(date,tz="Pacific/Auckland"){const p=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);const o=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${o.year}-${o.month}-${o.day}`;}
+function simpleMoonName(name,illum){const i=Number(illum||0),n=(name||"").toLowerCase();if(i<=5)return"new moon";if(i>=95)return"full moon";if(i>=45&&i<=55)return n.includes('wax')?"first quarter":(n.includes('wan')?"last quarter":"half");return n.includes('wax')?"waxing":(n.includes('wan')?"waning":(i<50?"waxing":"waning"));}
 
 /* =================== ENDPOINTS =================== */
-const wuCur = id=>`https://api.weather.com/v2/pws/observations/current?stationId=${id}&format=json&units=m&apiKey=${wuApiKey}`;
-const xwCond = id=>`https://data.api.xweather.com/conditions/${id}?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.visibilityKM,periods.uvi&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
-const xwFcDayNight = id=>`https://data.api.xweather.com/forecasts/${id}?format=json&filter=daynight&limit=14&fields=periods.dateTimeISO,loc,periods.pop,periods.precipMM,periods.weather,periods.minTempC,periods.maxTempC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.icon,periods.uvi,periods.sunriseISO,periods.sunsetISO,periods.minHumidity,periods.maxHumidity&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
-const xwFcHourly = id=>`https://data.api.xweather.com/forecasts/${id}?format=json&filter=1hr&limit=48&fields=periods.dateTimeISO,periods.tempC,periods.pop,periods.precipMM,periods.icon,periods.windSpeedKPH,periods.windDir,periods.weather,periods.uvi&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
-const xwSunMoon = (id,days=14)=>{const now=new Date(),to=new Date(now.getTime()+(days-1)*86400e3);const mdy=d=>`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;return `https://data.api.xweather.com/sunmoon/${id}?from=${mdy(now)}&to=${mdy(to)}&format=json&fields=dateTimeISO,profile,moon,sun&client_id=${apiClientId}&client_secret=${apiClientSecret}`};
-const xwObs = (id,fromISO,toISO)=>`https://data.api.xweather.com/observations/${id}?from=${fromISO}&to=${toISO}&fields=periods.dateTimeISO,periods.precipMM&plimit=10000&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
-const xwMarineId     = id=>`https://data.api.xweather.com/maritime/${id}?filter=1hr&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
-const xwMarineClosest= ({lat,long})=>`https://data.api.xweather.com/maritime/closest?p=${lat},${long}&filter=1hr&limit=1&client_id=${apiClientId}&client_secret=${apiClientSecret}`;
+const wuCur = id=>`https://api.weather.com/v2/pws/observations/current?stationId=${id}&format=json&units=m&apiKey=${WU_KEY}`;
+const xwCond = id=>`https://data.api.xweather.com/conditions/${id}?format=json&plimit=1&filter=1min&fields=loc,periods.dateTimeISO,periods.tempC,periods.dewpointC,periods.humidity,periods.windSpeedKPH,periods.windDir,periods.weather,periods.feelslikeC,periods.visibilityKM,periods.uvi&client_id=${XW_ID}&client_secret=${XW_SECRET}`;
+const xwFcDN = id=>`https://data.api.xweather.com/forecasts/${id}?format=json&filter=daynight&limit=14&fields=periods.dateTimeISO,loc,periods.pop,periods.precipMM,periods.weather,periods.minTempC,periods.maxTempC,periods.windSpeedMaxKPH,periods.windSpeedMinKPH,periods.windDirMax,periods.windDirMin,periods.icon,periods.uvi,periods.sunriseISO,periods.sunsetISO,periods.minHumidity,periods.maxHumidity&client_id=${XW_ID}&client_secret=${XW_SECRET}`;
+const xwHourly = id=>`https://data.api.xweather.com/forecasts/${id}?format=json&filter=1hr&limit=60&fields=periods.dateTimeISO,periods.tempC,periods.pop,periods.precipMM,periods.icon,periods.windSpeedKPH,periods.windDir,periods.weather,periods.uvi&client_id=${XW_ID}&client_secret=${XW_SECRET}`;
+const xwSunMoon = (id,days=14)=>{const now=new Date(),to=new Date(now.getTime()+(days-1)*86400e3);const mdy=d=>`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;return `https://data.api.xweather.com/sunmoon/${id}?from=${mdy(now)}&to=${mdy(to)}&format=json&fields=dateTimeISO,profile,moon,sun&client_id=${XW_ID}&client_secret=${XW_SECRET}`};
+const xwObs = (id,fromISO,toISO)=>`https://data.api.xweather.com/observations/${id}?from=${fromISO}&to=${toISO}&fields=periods.dateTimeISO,periods.precipMM&plimit=10000&client_id=${XW_ID}&client_secret=${XW_SECRET}`;
+const worldTidesExtremes = (lat,lon,days)=>`https://www.worldtides.info/api?extremes&days=${days}&lat=${lat}&lon=${lon}&key=${WORLDTIDES_KEY}`;
 
 /* =================== STATE =================== */
 let tz = "Pacific/Auckland";
 let pressureBuf=[];
-let daily=[];        // {date, day, night}
-let astroByDate={};  // date -> { moon:{...}, sun:{...} }
-let hourlyCache=null;
+let daily=[];            // [{date, day, night}]
+let astroByDate={};      // date -> {moon:{name,illum,riseISO,setISO,transitISO,underfootISO}, sun:{riseISO,setISO}}
+let hourlyCache=[];
 
-/* =================== CORE =================== */
+/* =================== BOOT =================== */
 async function start(){
   $('loader').style.display='block'; $('mainContent').style.display='none';
 
-  // CURRENT (WU primary + XW fill)
-  let cur = await getCurrentFromWU(wuStationMain);
-  const xwc = await get(xwCond(xwStationId),9000);
-  const p0 = xwc?.response?.[0]?.periods?.[0];
-  if (p0){
-    cur.temp = cur.temp ?? p0.tempC ?? null;
-    cur.feelslike = cur.feelslike ?? p0.feelslikeC ?? null;
-    cur.humidity = cur.humidity ?? p0.humidity ?? null;
-    cur.windSpeed = cur.windSpeed ?? p0.windSpeedKPH ?? null;
-    cur.windDir = cur.windDir ?? p0.windDir ?? null;
-    cur.dewpt = cur.dewpt ?? p0.dewpointC ?? null;
-    cur.visibility = cur.visibility ?? p0.visibilityKM ?? null;
-    cur.uv = cur.uv ?? p0.uvi ?? null;
-    cur.obsEpoch = cur.obsEpoch ?? (p0.dateTimeISO?Date.parse(p0.dateTimeISO):Date.now());
-  }
-  if (cur.pressure!=null){ pressureBuf.push({time:cur.obsEpoch,value:Number(cur.pressure)}); pressureBuf=pressureBuf.filter(x=>cur.obsEpoch-x.time<3*3600e3); }
-
-  // Forecasts (day/night + hourly) + sun/moon
-  const [fcDN, sm, hourly] = await Promise.all([
-    get(xwFcDayNight(xwStationId),12000),
-    get(xwSunMoon(xwStationId,14),12000),
-    get(xwFcHourly(xwStationId),12000)
+  const [curWU, xwc, fcdn, sunmoon, hourly] = await Promise.all([
+    get(wuCur(WU_MAIN),9000),
+    get(xwCond(XW_STATION),9000),
+    get(xwFcDN(XW_STATION),12000),
+    get(xwSunMoon(XW_STATION,14),12000),
+    get(xwHourly(XW_STATION),12000)
   ]);
-  hourlyCache = hourly?.response?.[0]?.periods || [];
-  const periods = (fcDN?.response?.[0]?.periods||[]).filter(p=>p && p.dateTimeISO);
-  daily = groupDayNight(periods);
 
-  astroByDate={};
-  (sm?.response||[]).forEach(d=>{
-    tz = d?.profile?.tz || tz;
+  const cur = buildCurrent(curWU, xwc);
+  hourlyCache = (hourly?.response?.[0]?.periods||[]);
+
+  // day/night & astronomy
+  const periods = (fcdn?.response?.[0]?.periods||[]).filter(p=>p&&p.dateTimeISO);
+  daily = groupDayNight(periods);
+  astroByDate={}; (sunmoon?.response||[]).forEach(d=>{
+    tz=d?.profile?.tz || tz;
     const key=d.dateTimeISO.slice(0,10);
-    astroByDate[key]={
-      moon:{
-        name:simpleMoonName(d.moon?.phase?.name,d.moon?.phase?.illum),
-        illum:d.moon?.phase?.illum??null,
-        riseISO:d.moon?.riseISO||null,
-        setISO:d.moon?.setISO||null,
-        transitISO:d.moon?.transitISO||null,
-        underfootISO:d.moon?.underfootISO||null
-      },
-      sun:{
-        riseISO:d.sun?.riseISO||null,
-        setISO:d.sun?.setISO||null
-      }
-    };
+    astroByDate[key]={moon:{name:simpleMoonName(d.moon?.phase?.name,d.moon?.phase?.illum),illum:d.moon?.phase?.illum,riseISO:d.moon?.riseISO,setISO:d.moon?.setISO,transitISO:d.moon?.transitISO,underfootISO:d.moon?.underfootISO},sun:{riseISO:d.sun?.riseISO,setISO:d.sun?.setISO}};
   });
 
-  const todayKey = localISO(new Date(), tz);
-  const astroToday = astroByDate[todayKey];
-  const todayDay = daily[0]?.day || {};
-  cur.sunrise = astroToday?.sun?.riseISO || todayDay.sunriseISO || null;
-  cur.sunset  = astroToday?.sun?.setISO  || todayDay.sunsetISO  || null;
+  const todayKey=localISO(new Date(),tz);
+  const todayDay=daily[0]?.day||{};
+  cur.sunrise=astroByDate[todayKey]?.sun?.riseISO||todayDay.sunriseISO||null;
+  cur.sunset =astroByDate[todayKey]?.sun?.setISO ||todayDay.sunsetISO ||null;
 
+  // rain totals
   const rain = await computeRainTotals(cur);
 
   renderCurrent(cur, todayDay, todayKey);
-  renderAdviceSmart(cur, todayDay, rain, new Date());
+  renderAdvice(cur, todayDay, rain, new Date());
   renderForecastCards(daily, todayKey);
   renderRainPanel(rain);
   await renderFishingPanels();
@@ -259,91 +200,61 @@ async function start(){
   $('loader').style.display='none'; $('mainContent').style.display='';
 }
 
-async function getCurrentFromWU(stationId){
-  const wu = await get(wuCur(stationId),9000);
-  if (wu?.observations?.[0]){
-    const o=wu.observations[0], m=o.metric||{};
-    return {
-      temp:m.temp??null, feelslike:m.heatIndex??null, humidity:o.humidity??null,
-      windSpeed:m.windSpeed??o.windSpeed??null, windGust:m.windGust??o.windGust??null,
-      windDir:(typeof o.winddir==='number'?o.winddir:null),
-      precipRate:m.precipRate??null, precipTotalToday:m.precipTotal??0,
-      precipTotalLast24h:m.precipTotalLast24h??null,
-      pressure:m.pressure??null, dewpt:m.dewpt??null,
-      uv:o.uv??null, visibility:(o.visibility!=null?o.visibility:null), solarRadiation:o.solarRadiation??null,
-      obsEpoch:o.obsTimeUtc?Date.parse(o.obsTimeUtc):Date.now()
-    };
-  }
-  return {};
+/* ========= builders/renderers ========= */
+function buildCurrent(wu, xwc){
+  const o=wu?.observations?.[0]||{}, m=o.metric||{}, p0=xwc?.response?.[0]?.periods?.[0]||{};
+  const c={
+    temp: m.temp ?? p0.tempC ?? null,
+    feelslike: m.heatIndex ?? p0.feelslikeC ?? null,
+    humidity: o.humidity ?? p0.humidity ?? null,
+    windSpeed: m.windSpeed ?? p0.windSpeedKPH ?? null,
+    windGust: m.windGust ?? null,
+    windDir: (typeof o.winddir==='number'?o.winddir:p0.windDir??null),
+    precipRate: m.precipRate ?? null,
+    precipTotalToday: m.precipTotal ?? 0,
+    precipTotalLast24h: m.precipTotalLast24h ?? null,
+    pressure: m.pressure ?? null,
+    dewpt: m.dewpt ?? p0.dewpointC ?? null,
+    uv: o.uv ?? p0.uvi ?? null,
+    visibility: (o.visibility!=null?o.visibility:p0.visibilityKM??null),
+    solarRadiation: o.solarRadiation ?? null,
+    obsEpoch: o.obsTimeUtc?Date.parse(o.obsTimeUtc):Date.now()
+  };
+  if (c.pressure!=null){ pressureBuf.push({time:c.obsEpoch,value:Number(c.pressure)}); pressureBuf=pressureBuf.filter(x=>c.obsEpoch-x.time<3*3600e3); }
+  return c;
 }
-
-function groupDayNight(perArr){
-  const byDate = {};
-  (perArr||[]).forEach(per=>{
-    const d = per.dateTimeISO.slice(0,10);
-    if (!byDate[d]) byDate[d] = {date:d, list:[]};
-    byDate[d].list.push(per);
-  });
-  return Object.values(byDate).sort((a,b)=> (a.date<b.date?-1:1)).map(x=>{
-    const [day,night] = x.list;
-    return { date:x.date, day, night };
-  });
+function groupDayNight(arr){
+  const by={}; (arr||[]).forEach(p=>{const d=p.dateTimeISO.slice(0,10); if(!by[d]) by[d]={date:d,list:[]}; by[d].list.push(p);});
+  return Object.values(by).sort((a,b)=>a.date<b.date?-1:1).map(x=>({date:x.date,day:x.list[0],night:x.list[1]}));
 }
+function pressureTrend(){ if(pressureBuf.length<2)return null; const s=pressureBuf.slice().sort((a,b)=>a.time-b.time); const d=s[s.length-1].value-s[0].value; if(Math.abs(d)<0.5)return"steady"; return d>0?"rising":"falling";}
 
-function pressureTrend(){
-  if (pressureBuf.length<2) return null;
-  const s=pressureBuf.slice().sort((a,b)=>a.time-b.time);
-  const d=s[s.length-1].value - s[0].value;
-  if (Math.abs(d)<0.5) return "steady";
-  return d>0?"rising":"falling";
-}
+function moonSVG(name,illum){const pct=Math.max(0,Math.min(100,Number(illum||0)));const waxing=/wax/i.test(name)||(!/wan/i.test(name)&&pct<50);const rad=20,cx=20,cy=20;const w=(pct/100)*40;const left=waxing?cx-w/2:cx-(40-w)/2;const right=waxing?cx+w/2:cx+(40-w)/2;const L=Math.max(0,left),R=Math.min(40,right);const arc=`M ${L} ${cy} A ${rad} ${rad} 0 1 0 ${R} ${cy} A ${rad} ${rad} 0 1 0 ${L} ${cy} Z`;const svg=`<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="${cx}" cy="${cy}" r="${rad}" fill="#223241"/><path d="${arc}" fill="#f5f7fb"/></svg>`;return'data:image/svg+xml;utf8,'+encodeURIComponent(svg);}
 
-/* -------- Moon SVG -------- */
-function moonSVG(name, illum){
-  const pct = Math.max(0, Math.min(100, Number(illum||0)));
-  const waxing = /wax/i.test(name)||(!/wan/i.test(name)&&pct<50);
-  const rad = 20, cx=20, cy=20;
-  const w = (pct/100)*40;
-  const left = waxing ? cx - w/2 : cx - (40 - w)/2;
-  const right= waxing ? cx + w/2 : cx + (40 - w)/2;
-  const shineLeft = Math.max(0,left), shineRight=Math.min(40,right);
-  const arc = `M ${shineLeft} ${cy} A ${rad} ${rad} 0 1 0 ${shineRight} ${cy} A ${rad} ${rad} 0 1 0 ${shineLeft} ${cy} Z`;
-  const svg = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="${cx}" cy="${cy}" r="${rad}" fill="#223241"/>
-    <path d="${arc}" fill="#f5f7fb"/>
-  </svg>`;
-  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-}
-
-/* -------- CURRENT PANEL -------- */
-function renderCurrent(p, todayDay, todayKey){
-  const icon = iconUrl(todayDay);
-  const windVal = (p.windSpeed!=null)?Number(p.windSpeed).toFixed(1):null;
-  const gustVal = (p.windGust!=null)?Number(p.windGust).toFixed(1):null;
-  const windDirCard = (typeof p.windDir==='number')?degToCardinal(p.windDir):(typeof p.windDir==='string'?p.windDir:"");
-  let windTxt="—"; if(windVal!==null) windTxt = (windVal<0.6)?"Calm":`${windVal} / ${gustVal||windVal} km/h ${windDirCard?`(${windDirCard})`:""}`;
-  let pressTxt = (p.pressure!=null)?`${Number(p.pressure).toFixed(1)} hPa`:"—"; const tr=pressureTrend(); if(tr) pressTxt+=` (${tr})`;
-
-  const m=astroByDate[todayKey]?.moon;
-  const moonTxt = m ? `${m.name}${m.illum!=null?` • ${m.illum}%`:``}` : "—";
-  const moonImg = m ? `<img src="${moonSVG(m.name,m.illum)}" alt="moon" style="width:40px;height:40px;display:block;margin-top:2px;">`:"";
-
-  const grid = [
-    ["Feels Like", (p.feelslike!=null)?to1(p.feelslike)+"°C":"—"],
-    ["Weather", todayDay?.weather||"—"],
-    ["Rain Rate", (p.precipRate!=null)?to1(p.precipRate)+" mm/hr":"—"],
-    ["Humidity", (p.humidity!=null)?Math.round(p.humidity)+"%":"—"],
-    ["Wind / Gust", windTxt],
-    ["Pressure", pressTxt],
-    ["Dew Point", (p.dewpt!=null)?`${to1(p.dewpt)}°C`:"—"],
-    ["Visibility", (p.visibility!=null)?`${to1(p.visibility)} km`:"—"],
-    ["Solar", (p.solarRadiation!=null)?`${p.solarRadiation} W/m²`:"—"],
-    ["UV", (p.uv!=null)?p.uv:"—"],
-    ["Sunrise", safeHM(p.sunrise)],
-    ["Sunset",  safeHM(p.sunset)]
+function renderCurrent(p,todayDay,todayKey){
+  const icon=iconUrl(todayDay);
+  const windVal=(p.windSpeed!=null)?Number(p.windSpeed).toFixed(1):null;
+  const gustVal=(p.windGust!=null)?Number(p.windGust).toFixed(1):null;
+  const windDirCard=(typeof p.windDir==='number')?degToCardinal(p.windDir):(typeof p.windDir==='string'?p.windDir:"");
+  let windTxt="—"; if(windVal!==null) windTxt=(windVal<0.6)?"Calm":`${windVal} / ${gustVal||windVal} km/h ${windDirCard?`(${windDirCard})`:""}`;
+  let pressTxt=(p.pressure!=null)?`${Number(p.pressure).toFixed(1)} hPa`:"—"; const tr=pressureTrend(); if(tr) pressTxt+=` (${tr})`;
+  const m=astroByDate[todayKey]?.moon; const moonTxt=m?`${m.name}${m.illum!=null?` • ${m.illum}%`:``}`:"—";
+  const moonImg=m?`<img src="${moonSVG(m.name,m.illum)}" alt="moon" style="width:40px;height:40px;display:block;margin-top:2px;">`:"";
+  const grid=[
+    ["Feels Like",(p.feelslike!=null)?to1(p.feelslike)+"°C":"—"],
+    ["Weather",todayDay?.weather||"—"],
+    ["Rain Rate",(p.precipRate!=null)?to1(p.precipRate)+" mm/hr":"—"],
+    ["Humidity",(p.humidity!=null)?Math.round(p.humidity)+"%":"—"],
+    ["Wind / Gust",windTxt],
+    ["Pressure",pressTxt],
+    ["Dew Point",(p.dewpt!=null)?`${to1(p.dewpt)}°C`:"—"],
+    ["Visibility",(p.visibility!=null)?`${to1(p.visibility)} km`:"—"],
+    ["Solar",(p.solarRadiation!=null)?`${p.solarRadiation} W/m²`:"—"],
+    ["UV",(p.uv!=null)?p.uv:"—"],
+    ["Sunrise",safeHM(astroByDate[todayKey]?.sun?.riseISO||todayDay.sunriseISO)],
+    ["Sunset",safeHM(astroByDate[todayKey]?.sun?.setISO||todayDay.sunsetISO)]
   ].map(([k,v])=>`<div class="current-field"><span class="current-label">${k}:</span> ${v}</div>`).join("");
-
-  $('currentBlock').innerHTML = `
+  $('currentBlock').innerHTML=`
     <div class="current-left">
       <img class="current-icon" src="${icon}" alt="icon"/>
       <div class="current-temp-big">${(p.temp!=null)?to1(p.temp)+"°C":"—"}</div>
@@ -356,15 +267,47 @@ function renderCurrent(p, todayDay, todayKey){
     </div>`;
 }
 
-/* -------- FORECAST CARDS (skip today) -------- */
-function renderForecastCards(dailyArr){
+function renderAdvice(obs, todayDay, rainTotals, now=new Date()){
+  const month=now.getMonth()+1, season=(month>=12||month<=2)?"summer":(month<=5?"autumn":(month<=8?"winter":"spring"));
+  const windMax=Number(todayDay?.windSpeedMaxKPH ?? 0);
+  const pop=Number(todayDay?.pop ?? 0);
+  const uv=Number(todayDay?.uvi ?? obs?.uv ?? 0);
+  const min=Number(todayDay?.minTempC ?? NaN);
+  const max=Number(todayDay?.maxTempC ?? NaN);
+  const trend=pressureTrend();
+
+  function clip(arr,n){return arr.filter(Boolean).slice(0,n).join(' ');}
+  const today = clip([
+    windMax>=45 && "Windy later on exposed hills — tie down tarps and tramp nets.",
+    pop>=60 && "Keep a rain layer handy; allow extra travel time.",
+    (uv>=7 && season!=='winter') && "High UV near midday — sunscreen, hat, sleeves.",
+    (trend==='falling' && pop<40) && "Pressure falling — expect a change by evening.",
+    (!isNaN(max)&&!isNaN(min) && max-min>=10) && "Big day–night swing — layers work best."
+  ],2) || "Settled overall — good window for jobs and errands.";
+
+  const tonight = clip([
+    (season==='winter' && min<=2) && "Risk of frost — cover tender plants; watch shady bridges.",
+    (rainTotals?.last7>=60) && "Ground still soft — take care on paddocks and gravel tracks.",
+    (windMax<=15 && pop<30) && "Calm evening — quick walk or outdoor tasks should be fine."
+  ],2) || "Quiet night expected.";
+
+  const tomorrow = clip([
+    windMax>=40 && "Plan outdoor tasks for the morning while winds lighter.",
+    pop>=50 && "Have wet-weather backups ready.",
+    (season==='summer' && max>=26) && "Hydrate and start early if working outside."
+  ],2) || "Another generally settled day likely.";
+
+  $('adviceBlock').innerHTML = `<b>Today:</b> ${today} <b>Tonight:</b> ${tonight} <b>Tomorrow:</b> ${tomorrow}`;
+}
+
+/* -------- Forecast row (skip today) -------- */
+function renderForecastCards(dailyArr, todayKey){
   const row=$('forecastRow'); row.innerHTML='';
-  dailyArr.slice(1,8).forEach((d,idxDisp)=>{
-    const per = d.day || d.night || {};
+  dailyArr.slice(1,8).forEach(d=>{
+    const per=d.day || d.night || {};
     const astro=astroByDate[d.date]; const moon=astro?.moon;
-    const moonLine = moon ? `Moon: ${moon.name}` : '';
-    const min = (d.day?.minTempC ?? d.night?.minTempC ?? null);
-    const max = (d.day?.maxTempC ?? d.night?.maxTempC ?? null);
+    const min=(d.day?.minTempC ?? d.night?.minTempC ?? null);
+    const max=(d.day?.maxTempC ?? d.night?.maxTempC ?? null);
     const card=document.createElement('div');
     card.className='forecast-card'; card.dataset.date=d.date;
     card.innerHTML=`
@@ -373,40 +316,31 @@ function renderForecastCards(dailyArr){
       <div class="forecast-summary">${(d.day?.weather || per.weather || "—")}</div>
       <div class="forecast-temps">${max!=null?to1(min):"—"}–${max!=null?to1(max):"—"}°C</div>
       <div class="forecast-rain">Rain: ${to1(d.day?.precipMM ?? per.precipMM)} mm • POP ${(d.day?.pop ?? per.pop ?? "—")}%</div>
-      <div class="forecast-moon">${moonLine}</div>`;
-    card.addEventListener('click',()=>showForecastDetailsByDate(d.date));
+      <div class="forecast-moon">${moon?`Moon: ${moon.name}`:""}</div>`;
+    card.addEventListener('click',()=>showForecastDetails(d.date));
     row.appendChild(card);
   });
 }
 
-/* -------- HOURLY MODAL -------- */
-function showForecastDetailsByDate(dateKey){
-  const entry = daily.find(x=>x.date===dateKey) || {};
-  const day = entry.day || {};
-  const night = entry.night || {};
-  const astro = astroByDate[dateKey];
-  const m = astro?.moon;
-  const moonTxt = m ? `${m.name}${(m.illum!=null?` (${m.illum}% illum)`:"")}` : "—";
-  const sunrise = astro?.sun?.riseISO || day.sunriseISO || null;
-  const sunset  = astro?.sun?.setISO  || day.sunsetISO  || null;
+/* -------- Hourly modal (2-hourly) -------- */
+function showForecastDetails(dateKey){
+  const entry=daily.find(x=>x.date===dateKey)||{};
+  const day=entry.day||{}, night=entry.night||{};
+  const astro=astroByDate[dateKey]; const m=astro?.moon;
+  const sunrise=astro?.sun?.riseISO || day.sunriseISO || null;
+  const sunset =astro?.sun?.setISO  || day.sunsetISO  || null;
+  const moonTxt=m?`${m.name}${(m.illum!=null?` (${m.illum}% illum)`:"")}`:"—";
+  const moonImg=m?`<img src="${moonSVG(m.name,m.illum)}" alt="moon" style="width:40px;height:40px;vertical-align:middle;margin-bottom:-8px;">`:"";
 
-  // hourly for that calendar date
-  const hrs = (hourlyCache||[]).filter(h=> (h.dateTimeISO||"").slice(0,10)===dateKey );
-  const hRows = hrs.map(h=>{
-    const t = safeHM(h.dateTimeISO);
-    const w = h.weather || "";
-    const ic = iconUrl(h);
-    const wind = h.windSpeedKPH!=null ? `${Math.round(h.windSpeedKPH)} km/h ${h.windDir||""}` : "—";
-    const pop = h.pop!=null ? `${h.pop}%` : "—";
-    const rain = h.precipMM!=null ? `${to1(h.precipMM)} mm` : "—";
+  const hrs=(hourlyCache||[]).filter(h=>(h.dateTimeISO||"").slice(0,10)===dateKey)
+              .filter((h,idx)=> new Date(h.dateTimeISO).getHours()%2===0); // every 2 hours
+  const rows=hrs.map(h=>{
+    const t=safeHM(h.dateTimeISO), ic=iconUrl(h), wind=h.windSpeedKPH!=null?`${Math.round(h.windSpeedKPH)} km/h ${h.windDir||""}`:"—";
     return `<div class="hour-row">
-      <div class="h-left"><span class="h-time">${t}</span><img class="h-icon" src="${ic}" alt=""><span class="h-info">${to1(h.tempC)}°C • ${w}</span></div>
-      <div class="h-meta">POP ${pop} • Rain ${rain} • Wind ${wind}</div>
+      <div class="h-left"><span class="h-time">${t}</span><img class="h-icon" src="${ic}" alt=""><span class="h-info">${to1(h.tempC)}°C • ${h.weather||""}</span></div>
+      <div class="h-meta">POP ${h.pop!=null?h.pop:"—"}% • Rain ${h.precipMM!=null?to1(h.precipMM):"—"} mm • Wind ${wind}</div>
     </div>`;
   }).join('');
-
-  const summary = makeDailySummary(day, night, new Date(dateKey));
-  const moonImg = m ? `<img src="${moonSVG(m.name,m.illum)}" alt="moon" style="width:40px;height:40px;vertical-align:middle;margin-bottom:-8px;">`:"";
 
   const popup=$('modalPopup');
   popup.innerHTML=`
@@ -416,124 +350,39 @@ function showForecastDetailsByDate(dateKey){
       <b>Moon:</b> ${moonImg} ${moonTxt}<br><br>
 
       <b>Day</b><br>
-      <img class="forecast-icon" src="${iconUrl(day)}" alt="day icon"/>
-      ${day.weather||"—"}<br>
-      Temp: ${to1(day.maxTempC ?? night.maxTempC)}°C / ${to1(day.minTempC ?? night.minTempC)}°C<br>
-      Wind: ${(day.windSpeedMinKPH??"—")}–${(day.windSpeedMaxKPH??"—")} km/h (${day.windDirMin!=null?degToCardinal(day.windDirMin):""}${day.windDirMax!=null?"–"+degToCardinal(day.windDirMax):""})<br>
+      <img class="forecast-icon" src="${iconUrl(day)}" alt="day icon"/> ${day.weather||"—"}<br>
+      Temp: ${to1(day.maxTempC ?? night.maxTempC)}°C / ${to1(day.minTempC ?? night.minTempC)}°C •
+      Wind: ${(day.windSpeedMinKPH??"—")}–${(day.windSpeedMaxKPH??"—")} km/h (${day.windDirMin!=null?degToCardinal(day.windDirMin):""}${day.windDirMax!=null?"–"+degToCardinal(day.windDirMax):""}) •
       Rain: ${to1(day.precipMM)} mm • POP ${(day.pop??"—")}% • UV ${(day.uvi??"—")}<br>
       Sunrise: ${safeHM(sunrise)} • Sunset: ${safeHM(sunset)}<br><br>
 
       <b>Night</b><br>
-      <img class="forecast-icon" src="${iconUrl(night)}" alt="night icon"/>
-      ${night.weather||"—"}<br>
-      Temp: ${to1(night.maxTempC ?? day.maxTempC)}°C / ${to1(night.minTempC ?? day.minTempC)}°C<br>
-      Wind: ${(night.windSpeedMinKPH??"—")}–${(night.windSpeedMaxKPH??"—")} km/h (${night.windDirMin!=null?degToCardinal(night.windDirMin):""}${night.windDirMax!=null?"–"+degToCardinal(night.windDirMax):""})<br>
+      <img class="forecast-icon" src="${iconUrl(night)}" alt="night icon"/> ${night.weather||"—"}<br>
+      Temp: ${to1(night.maxTempC ?? day.maxTempC)}°C / ${to1(night.minTempC ?? day.minTempC)}°C •
+      Wind: ${(night.windSpeedMinKPH??"—")}–${(night.windSpeedMaxKPH??"—")} km/h (${night.windDirMin!=null?degToCardinal(night.windDirMin):""}${night.windDirMax!=null?"–"+degToCardinal(night.windDirMax):""}) •
       Rain: ${to1(night.precipMM)} mm • POP ${(night.pop??"—")}%<br>
-      <hr style="margin:10px 0">
-      <b>Summary:</b> ${summary}
 
-      <div class="hourly-grid">${hRows || "<div style='opacity:.7'>Hourly forecast not available.</div>"}</div>
+      <div class="hourly-grid">${rows || "<div style='opacity:.7'>2-hourly forecast not available.</div>"}</div>
     </div>`;
   $('modalBg').style.display='flex';
 }
 function closeModal(){ $('modalBg').style.display='none'; }
-document.getElementById('modalBg').addEventListener('click',(e)=>{ if (e.target===document.getElementById('modalBg')) closeModal(); });
+$('modalBg').addEventListener('click',e=>{ if(e.target===$('modalBg')) closeModal(); });
 
-function makeDailySummary(day, night, dateObj){
-  const month=dateObj.getMonth()+1, isWinter=(month>=6&&month<=8), isSummer=(month==12||month<=2);
-  const max=Number(day?.maxTempC ?? night?.maxTempC ?? NaN);
-  const min=Number(day?.minTempC ?? night?.minTempC ?? NaN);
-  const pop = Math.max(Number(day?.pop ?? 0), Number(night?.pop ?? 0));
-  const wind= Math.max(Number(day?.windSpeedMaxKPH ?? 0), Number(night?.windSpeedMaxKPH ?? 0));
-  const bits=[];
-  if(!isNaN(max)&&!isNaN(min)){ const swing=max-min; bits.push(`${isWinter?"Cool":(isSummer?"Warm":"Mild")} ${Math.round(max)}°/${Math.round(min)}°`); if (swing>=10) bits.push("large diurnal range"); }
-  if(pop>=60) bits.push("periods of rain"); else if(pop>=30) bits.push("a few showers"); else bits.push("mainly dry");
-  if(wind>=45) bits.push("windy, take care"); else if(wind>=25) bits.push("breezy at times");
-  return bits.join(", ")+".";
-}
-
-/* -------- Advice: Today / Tonight / Tomorrow (concise, practical) -------- */
-function renderAdviceSmart(obs, todayDay, rainTotals, now=new Date()){
-  const ctx = prepContext(obs, todayDay, rainTotals, now);
-  const lines = [
-    adviceToday(ctx),
-    adviceTonight(ctx),
-    adviceTomorrow(ctx)
-  ].filter(Boolean);
-  $('adviceBlock').innerHTML = lines.map((l,i)=> (i===0?`<b>Today:</b> ${l}`: (i===1?` <b>Tonight:</b> ${l}`: ` <b>Tomorrow:</b> ${l}`))).join(' ');
-}
-function prepContext(obs, day, rainTotals, now){
-  const m=now.getMonth()+1;
-  const season=(m>=12||m<=2)?"summer":(m<=5?"autumn":(m<=8?"winter":"spring"));
-  const windMax=Number(day?.windSpeedMaxKPH ?? obs?.windSpeed ?? 0);
-  const windMin=Number(day?.windSpeedMinKPH ?? 0);
-  const pop=Number(day?.pop ?? 0);
-  const rain=Number(day?.precipMM ?? 0);
-  const uv=Number(day?.uvi ?? obs?.uv ?? 0);
-  const maxT=Number(day?.maxTempC ?? obs?.temp ?? NaN);
-  const minT=Number(day?.minTempC ?? obs?.dewpt ?? NaN);
-  const hum=Number(obs?.humidity ?? day?.maxHumidity ?? 0);
-  const pressT=(function(){try{return pressureTrend&&pressureTrend();}catch{return null;}})();
-  return {season,windMax,windMin,pop,rain,uv,maxT,minT,hum,pressT,rainTotals};
-}
-function adviceToday(c){
-  const segs=[];
-  if (c.windMax>=50) segs.push("Secure loose items; caution on exposed roads.");
-  else if (c.windMax>=30) segs.push("Plan outdoor jobs for the calmer parts of the day.");
-  if (c.pop>=60 || c.rain>=5) segs.push("Keep rain gear handy; allow for slower travel.");
-  else if (c.pop>=30) segs.push("Showers possible — short, dry windows likely.");
-  if (c.uv>=7) segs.push("High UV: sunscreen, hat, and regular reapplication.");
-  if (c.season==='winter' && c.minT<=0) segs.push("Frost early — watch shaded bridges and farm tracks.");
-  if (c.pressT==='falling' && c.pop<40) segs.push("Pressure falling — a change later.");
-  return segs.slice(0,2).join(' ') || "Settled overall; good window for errands and outdoor work.";
-}
-function adviceTonight(c){
-  const segs=[];
-  if (c.season==='winter' && c.minT<=2) segs.push("Cover tender plants; bring in pets and hoses.");
-  if (c.season!=='winter' && c.minT<=4) segs.push("Cool night — a layer helps for early starts.");
-  if (c.rainTotals?.last7>=60) segs.push("Recent rain — watch for soft verges and slips on rural routes.");
-  if (c.windMin<=10 && c.pop<30) segs.push("Calm evening — good for a walk or quick jobs outside.");
-  return segs.slice(0,2).join(' ') || "Quiet evening expected.";
-}
-function adviceTomorrow(c){
-  const segs=[];
-  if (c.windMax>=40) segs.push("If you can, schedule bigger outdoor tasks for the morning.");
-  if (c.uv>=7 && c.season!=='winter') segs.push("Pack sun protection for tomorrow’s midday period.");
-  if (c.pop>=50) segs.push("Have wet-weather backups for tomorrow’s plans.");
-  if (c.season==='summer' && c.maxT>=26) segs.push("Hydrate and start early.");
-  return segs.slice(0,2).join(' ') || "Another generally settled day on the cards.";
-}
-
-/* -------- Rain totals (WU today/yesterday + XWeather history) -------- */
+/* -------- Rain totals -------- */
 async function computeRainTotals(cur){
-  const now=new Date();
-  const fromYTD = `${now.getFullYear()}-01-01`;
-  const toISO = localISO(now);
-  const his = await get(xwObs(xwStationId,fromYTD,toISO),12000);
-  let byDay = {};
-  (his?.response?.[0]?.periods||[]).forEach(p=>{
-    const d=(p.dateTimeISO||"").slice(0,10);
-    byDay[d]=(byDay[d]||0)+(Number(p.precipMM)||0);
-  });
-  const keyToday=localISO(now);
-  const key7=localISO(new Date(now.getTime()-6*86400e3));
-  const key30=localISO(new Date(now.getTime()-29*86400e3));
-  const last7 = sumRange(byDay,key7,keyToday);
-  const last30= sumRange(byDay,key30,keyToday);
-  const ytd   = sumRange(byDay,fromYTD,keyToday);
-
-  const todayWU = Number(cur.precipTotalToday||0);
-  let yestWU = (cur.precipTotalLast24h!=null)?Number(cur.precipTotalLast24h):null;
+  const now=new Date(); const fromYTD=`${now.getFullYear()}-01-01`; const toISO=localISO(now);
+  const his=await get(xwObs(XW_STATION,fromYTD,toISO),12000);
+  let byDay={}; (his?.response?.[0]?.periods||[]).forEach(p=>{const d=(p.dateTimeISO||"").slice(0,10); byDay[d]=(byDay[d]||0)+(Number(p.precipMM)||0);});
+  const keyToday=localISO(now); const key7=localISO(new Date(now.getTime()-6*86400e3)); const key30=localISO(new Date(now.getTime()-29*86400e3));
+  const sum=(from,to)=>{let t=0;for(const k in byDay){const d=new Date(k+"T12:00:00"); if(d>=new Date(from+"T00:00:00") && d<=new Date(to+"T23:59:59")) t+=Number(byDay[k]||0);}return Number(t.toFixed(1));};
+  let last7=sum(key7,keyToday), last30=sum(key30,keyToday), ytd=sum(fromYTD,keyToday);
+  const todayWU=Number(cur.precipTotalToday||0); let yestWU=(cur.precipTotalLast24h!=null)?Number(cur.precipTotalLast24h):null;
   if (yestWU==null){ const yKey=localISO(new Date(now.getTime()-86400e3)); yestWU=byDay[yKey]||0; }
   return {today:todayWU,yesterday:yestWU,last7,last30,ytd};
 }
-function sumRange(map,fromISO,toISO){
-  const from=new Date(fromISO+"T00:00:00"), to=new Date(toISO+"T23:59:59");
-  let tot=0; for(const k in map){ const d=new Date(k+"T12:00:00"); if(d>=from&&d<=to) tot+=Number(map[k]||0); }
-  return Number(tot.toFixed(1));
-}
 function renderRainPanel(r){
-  $('rainPanel').innerHTML = `
+  $('rainPanel').innerHTML=`
     <span class="rain-label">Rainfall Totals</span><br>
     Today: <b>${to1(r.today)} mm</b><br>
     Yesterday: <b>${to1(r.yesterday)} mm</b><br>
@@ -543,12 +392,12 @@ function renderRainPanel(r){
     <span style="font-size:.95em;opacity:.7;">*Today/yesterday from your WU station; longer totals from station history via XWeather.</span>`;
 }
 
-/* -------- Fishing / Tides / Swell -------- */
+/* -------- Fishing / Tides -------- */
 async function renderFishingPanels(){
-  const f0 = daily[0]?.day || {};
-  const mar0 = await getMarine(activeFishingKey);
-  const rating0 = rateFishing(f0, mar0);
-  $('fishRowVal').textContent = `${rating0.label} — ${rating0.note}`;
+  const todayContext = daily[0]?.day || {};
+  const marineC = await buildMarine(activeCoast);
+  const rating = rateFishing(todayContext, marineC);
+  $('fishRowVal').textContent = `${rating.label} — ${rating.note}`;
   await renderFishingPanelFull();
 }
 async function renderFishingPanelFull(){
@@ -557,134 +406,98 @@ async function renderFishingPanelFull(){
     <div class="fish-headline">Fishing, Tides & Swell</div>
     <div class="fish-switch">
       <span>Coromandel</span>
-      <label class="switch"><input id="fishToggle" type="checkbox" ${activeFishingKey==='whangapoua'?'checked':''}><span class="slider"></span></label>
+      <label class="switch"><input id="fishToggle" type="checkbox" ${activeCoast==='whangapoua'?'checked':''}><span class="slider"></span></label>
       <span>Whangapoua</span>
     </div>
     <div id="fishRating" class="fish-rating"></div>
     <div id="fishNote" class="fish-note"></div>
     <div id="fishMarine"></div>
-    <div id="tideWrap"></div>
+    <div id="tideWrap" style="margin-top:6px;"></div>
     <div id="fishOutlook" style="margin-top:8px;"></div>`;
-  $('fishToggle').addEventListener('change',async(e)=>{activeFishingKey=e.target.checked?'whangapoua':'coromandel'; await renderFishingPanelFull();});
+  $('fishToggle').addEventListener('change', async (e)=>{activeCoast=e.target.checked?'whangapoua':'coromandel'; await renderFishingPanelFull();});
 
-  // Marine snapshot + rating context (includes WU IMATAR74 when Whangapoua)
-  const mar = await getMarine(activeFishingKey);
-  const label = fishingSites[activeFishingKey].label;
-  $('fishMarine').textContent = `Marine (${label}, ~1hr): ${mar.text}`;
-  const todayContext = daily[0]?.day || {};
-  const rating = rateFishing(todayContext, mar, activeFishingKey);
+  const marine = await buildMarine(activeCoast);
+  $('fishMarine').textContent = `Marine (${COAST[activeCoast].label}, ~1hr): ${marine.text}`;
+  const rating = rateFishing(daily[0]?.day||{}, marine);
   $('fishRating').textContent=`Fishing: ${rating.label}`; $('fishRating').style.color=rating.color; $('fishNote').textContent=rating.note;
 
-  // 14-day tide-like table WITH per-day rating & fish icon
-  const rows=(Object.keys(astroByDate).sort()).slice(0,14).map(k=>{
-    const m=astroByDate[k]?.moon||{};
-    const off = tideOffsets[activeFishingKey]||{high:0,low:0};
-    const adj=(iso,mins)=> iso?new Date(new Date(iso).getTime()+mins*60000).toISOString():null;
-    const highs=[adj(m.transitISO,off.high),adj(m.underfootISO,off.high)].filter(Boolean).map(safeHM).join(', ')||'—';
-    const lows =[adj(m.riseISO,off.low),   adj(m.setISO,off.low)].filter(Boolean).map(safeHM).join(', ')||'—';
+  const tides = await getWorldTides(COAST[activeCoast].lat, COAST[activeCoast].lon, 14);
+  const tableHTML = buildTideTable(tides);
+  $('tideWrap').innerHTML = tableHTML;
 
-    // Per-day fishing score uses that day's forecast + current wave snapshot as proxy
-    const dDay = (daily.find(dd=>dd.date===k)?.day) || {};
-    const dayScore = rateFishing(dDay, mar, activeFishingKey);
-    const fishIco = fishIcon(dayScore.label);
-
-    const d=new Date(k+"T12:00:00");
-    const dayTxt=d.toLocaleDateString('en-NZ',{weekday:'short',month:'short',day:'numeric'});
-    const phase = m.name?`${m.name}${(m.illum!=null?` (${m.illum}% illum)`:``)}`:'—';
-    return `<tr>
-      <td style="padding:6px 4px;">${dayTxt}</td>
-      <td style="padding:6px 4px;">${highs}</td>
-      <td style="padding:6px 4px;">${lows}</td>
-      <td style="padding:6px 4px;">${phase}</td>
-      <td style="padding:6px 4px;white-space:nowrap;">${fishIco} ${dayScore.label}</td>
-    </tr>`;
-  }).join('');
-  $('tideWrap').innerHTML=`<table class="tide-table"><thead><tr><th>Day</th><th>High (approx)</th><th>Low (approx)</th><th>Moon</th><th>Fishing</th></tr></thead><tbody>${rows}</tbody></table><div class="tide-note">*Times inferred from moon transit/underfoot (highs) and moonrise/set (lows) with a coast-specific offset. For precise tide heights/times, use an official tide source.</div>`;
-
-  // 7-day headline outlook
   const outlook = daily.slice(0,7).map(d=>{
-    const r = rateFishing(d.day||d.night||{}, mar, activeFishingKey);
-    const wd = new Date(d.date+"T12:00:00").toLocaleDateString('en-NZ',{weekday:'short'});
-    return `${wd}: ${r.label}`;
+    const r = rateFishing(d.day||d.night||{}, marine);
+    const wd = new Date(d.date+"T12:00:00").toLocaleDateString('en-NZ',{weekday:'short'}); return `${wd}: ${r.label}`;
   }).join(' • ');
   $('fishOutlook').textContent = `7-day fishing outlook: ${outlook}`;
 }
 
-async function getMarine(siteKey){
-  // Prefer explicit maritime id, else closest by coords
-  const id = fishingSites[siteKey].maritimeId;
-  let p=null;
-  if (id){ const mar = await get(xwMarineId(id),9000); p = mar?.response?.[0]?.periods?.[0] || mar?.response?.[0] || null; }
-  if (!p){ const closest = await get(xwMarineClosest(siteCoords[siteKey]),9000); p = closest?.response?.[0]?.periods?.[0] || closest?.response?.[0] || null; }
-  const waveM = firstNum([p?.waveHeightM, p?.significantWaveHeightM, p?.seaHeightM, p?.waveHeight]);
-  const swlP  = firstNum([p?.swellPeriodS, p?.swellPeriod, p?.wavePeriodS, p?.wavePeriod]);
-  const swlD  = p?.swellDir || p?.primarySwellDirection || p?.waveDir || null;
-  const windKts = firstNum([p?.windSpeedKTS, p?.windKts]);
-  const windKph = firstNum([p?.windSpeedKPH, p?.windSpeedKMH]);
-  const txt = `Wave ${waveM!=null?to1(waveM):"—"} m, Swell ${swlP!=null?to1(swlP):"—"} s${swlD? " "+swlD:""}, Wind ${windKts!=null?to1(windKts)+" kt":(windKph!=null?to1(windKph)+" km/h":"—")}`;
+async function buildMarine(key){
+  // Pull local WU for wind context
+  const wu = await get(wuCur(COAST[key].wu),9000);
+  const o=wu?.observations?.[0]||{}, m=o.metric||{};
+  const localWind = m.windSpeed ?? null;
 
-  // When site is Whangapoua, blend in local WU station IMATAR74 for wind/rain context
-  if (siteKey==='whangapoua'){
-    const wul = await getCurrentFromWU(wuStationWhangapoua);
-    if (wul && wul.windSpeed!=null){
-      const localWind = Number(wul.windSpeed);
-      const txtLocal = ` (local WU: ${to1(localWind)} km/h)`;
-      return {...(p||{}), waveM, swlP, swlD, windKts, windKph, text:txt+txtLocal, wuLocal:wul};
-    }
-  }
-  return { ...(p||{}), waveM, swlP, swlD, windKts, windKph, text:txt };
+  // We don’t have a dedicated swell API with open CORS here. Use XWeather maritime “closest” if available via their marine plan, else fallback text.
+  const txt = `Wind ${localWind!=null?to1(localWind)+" km/h": "—"}; use local shelter and tide changes.`;
+  return { waveM:null, swlP:null, swlD:null, windKph:localWind, text:txt, wuLocal:o };
 }
-function rateFishing(f, marine, siteKey){
+
+async function getWorldTides(lat,lon,days){
+  const res = await get(worldTidesExtremes(lat,lon,days),12000);
+  // response.extremes: [{dt, date, height, type:'High'|'Low'}]
+  if (!res || !res.extremes) return [];
+  return res.extremes;
+}
+function buildTideTable(extremes){
+  // group by day and pick up to two highs/two lows
+  const by={};
+  extremes.forEach(e=>{
+    const d=e.date.slice(0,10);
+    if(!by[d]) by[d]={H:[],L:[]};
+    (e.type==='High'?by[d].H:by[d].L).push(e);
+  });
+  const rows = Object.keys(by).slice(0,14).map(k=>{
+    const H=by[k].H.slice(0,2).map(x=>safeHM(x.date)).join(', ')||'—';
+    const L=by[k].L.slice(0,2).map(x=>safeHM(x.date)).join(', ')||'—';
+    const m=astroByDate[k]?.moon||{};
+    const phase=m.name?`${m.name}${m.illum!=null?` (${m.illum}% illum)`:``}`:'—';
+    const r=rateFishing(daily.find(d=>d.date===k)?.day||{}, {windKph:null,waveM:null,swlP:null});
+    return `<tr>
+      <td style="padding:6px 4px;">${new Date(k+"T12:00:00").toLocaleDateString('en-NZ',{weekday:'short',month:'short',day:'numeric'})}</td>
+      <td style="padding:6px 4px;">${H}</td>
+      <td style="padding:6px 4px;">${L}</td>
+      <td style="padding:6px 4px;">${phase}</td>
+      <td style="padding:6px 4px;white-space:nowrap;">${fishIcon(r.label)} ${r.label}</td>
+    </tr>`;
+  }).join('');
+  return `<table class="tide-table"><thead><tr><th>Day</th><th>High</th><th>Low</th><th>Moon</th><th>Fishing</th></tr></thead><tbody>${rows}</tbody></table><div class="tide-note">Official tides via WorldTides. For precise heights, check your local harbourmaster pages.</div>`;
+}
+function rateFishing(f, marine){
   const pop=Number(f?.pop??0);
-  const wind=Number(f?.windSpeedMaxKPH??0);
+  const wind=Number(f?.windSpeedMaxKPH??marine?.windKph??0);
   const wave=(marine&&marine.waveM!=null)?Number(marine.waveM):null;
   const sp=(marine&&marine.swlP!=null)?Number(marine.swlP):null;
-
-  // If Whangapoua has WU local wind, use it to bias rating
-  const localWind = (siteKey==='whangapoua' && marine?.wuLocal?.windSpeed!=null) ? Number(marine.wuLocal.windSpeed) : null;
-  const windUse = localWind!=null ? Math.max(wind, localWind) : wind;
-
   let score=0;
-  if (windUse<10) score+=2; else if (windUse<=20) score+=1; else if (windUse>25) score-=2; else score-=1;
+  if (wind<10) score+=2; else if (wind<=20) score+=1; else if (wind>25) score-=2; else score-=1;
   if (pop<=20) score+=2; else if (pop<=50) score+=0; else score-=2;
   if (wave!=null){ if (wave<=1.0) score+=2; else if (wave<=1.5) score+=1; else if (wave>2) score-=2; else score-=1; }
   if (sp!=null){ if (sp>10) score+=1; else if (sp<7) score-=1; }
-
   if (score<=-1) return {label:"Bad",color:"#c0392b",note:"Strong wind or messy swell; choose sheltered water."};
-  if (score<= 1) return {label:"Fair",color:"#e67e22",note:"Usable windows; pick calmer periods and lee shores."};
-  if (score<= 3) return {label:"Good",color:"#27ae60",note:"Light winds and manageable swell."};
+  if (score<= 1) return {label:"Fair",color:"#e67e22",note:"Usable windows — pick calmer periods and lee shores."};
+  if (score<= 3) return {label:"Good",color:"#27ae60",note:"Light winds and manageable seas."};
   return {label:"Excellent",color:"#2ecc71",note:"Calm winds, low seas; best near tide changes."};
 }
-function fishIcon(label){
-  const col = label==="Excellent"?"#2ecc71":label==="Good"?"#27ae60":label==="Fair"?"#e67e22":"#c0392b";
-  const svg = `<svg class="fish-ico" viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg"><path fill="${col}" d="M36 4c-8 0-16 4-22 12 6 8 14 12 22 12 8 0 14-4 20-12-6-8-12-12-20-12zM6 16l-6 4 3-4-3-4 6 4z"/><circle cx="42" cy="12" r="2" fill="#fff"/></svg>`;
-  return svg;
-}
+function fishIcon(label){const col=label==="Excellent"?"#2ecc71":label==="Good"?"#27ae60":label==="Fair"?"#e67e22":"#c0392b";const svg=`<svg class="fish-ico" viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg"><path fill="${col}" d="M36 4c-8 0-16 4-22 12 6 8 14 12 22 12 8 0 14-4 20-12-6-8-12-12-20-12zM6 16l-6 4 3-4-3-4 6 4z"/><circle cx="42" cy="12" r="2" fill="#fff"/></svg>`;return svg;}
 
-/* -------- Debug + start -------- */
+/* -------- modal helpers / debug -------- */
 function showDebug(msg){
-  let el = document.getElementById('debugBanner');
-  if (!el){
-    el = document.createElement('div');
-    el.id = 'debugBanner';
-    el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#fff4d6;border:1px solid #f0c36d;border-radius:8px;padding:8px 10px;color:#5c3b00;font:14px/1.35 system-ui,Segoe UI,Arial;box-shadow:0 2px 10px #0002';
-    document.body.appendChild(el);
-  }
-  el.innerHTML = `<b>Debug:</b> ${msg}`;
+  let el=$('debugBanner'); if(!el){el=document.createElement('div');el.id='debugBanner';el.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#fff4d6;border:1px solid #f0c36d;border-radius:8px;padding:8px 10px;color:#5c3b00;font:14px/1.35 system-ui,Segoe UI,Arial;box-shadow:0 2px 10px #0002';document.body.appendChild(el);}
+  el.innerHTML=`<b>Debug:</b> ${msg}`;
 }
-async function safeStart(){
-  try { await start(); }
-  catch(e){ console.error('start() failed:', e); showDebug(e && e.message ? e.message : String(e)); }
-  finally{
-    const loader = document.getElementById('loader');
-    const main   = document.getElementById('mainContent');
-    if (loader) loader.style.display = 'none';
-    if (main)   main.style.display   = '';
-  }
-}
-window.addEventListener('load', safeStart);
-window.addEventListener('unhandledrejection', (ev)=>{ console.error('Unhandled rejection:', ev.reason); showDebug('Unhandled promise rejection: ' + (ev.reason?.message || ev.reason)); });
-window.addEventListener('error', (ev)=>{ console.error('Window error:', ev.error || ev.message); showDebug('Script error: ' + (ev.error?.message || ev.message)); });
+window.addEventListener('load',()=>start().catch(e=>{console.error(e);showDebug(e.message||String(e));}).finally(()=>{$('loader').style.display='none';$('mainContent').style.display='';}));
+window.addEventListener('unhandledrejection',ev=>{showDebug('Unhandled: '+(ev.reason?.message||ev.reason));});
+window.addEventListener('error',ev=>{showDebug('Script error: '+(ev.error?.message||ev.message));});
 </script>
 </body>
 </html>
