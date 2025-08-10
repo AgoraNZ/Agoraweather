@@ -12,7 +12,7 @@
   .main-title{font-size:2.07rem;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
   .sub-title{font-size:1.09rem;opacity:.94;font-weight:400;margin-bottom:0}
   .station-select-row{display:flex;align-items:center;gap:9px;margin:14px 0 7px}
-  select,button{font-size:1rem;padding:5px 10px;border-radius:6px;border:1px solid #18558e;background:#f4f7fb;color:#1c293a}
+  select{font-size:1rem;padding:5px 10px;border-radius:6px;border:1px solid #18558e;background:#f4f7fb;color:#1c293a}
   select:disabled{background:#e7eaf3;color:#888}
 
   .current-block{margin:17px 18px 0;padding:17px 11px;border-radius:12px;background:#eaf3fa;box-shadow:0 2px 8px #cad8e850;display:flex;align-items:center;gap:18px}
@@ -229,7 +229,7 @@ async function start(){
   renderCurrent(cur, todayDay, todayKey);
   renderAdvice(cur, todayDay, rain.today);
   renderForecastCards(daily, todayKey);
-  renderRainPanel(rain);
+  renderRainPanel(rain);              /* <-- now defined */
   await renderFishingPanels();
 
   $('loader').style.display='none'; $('mainContent').style.display='';
@@ -410,10 +410,11 @@ function makeDailySummary(day, night, dateObj){
   return bits.join(", ") + ".";
 }
 
+/* ---- Rain via WU daily summaries ---- */
 async function computeRainWU(cur){
   const [s7, s30] = await Promise.all([ get(wu7(wuStationId),9000), get(wu30(wuStationId),11000) ]);
   const sum = (j)=>{
-    const arr = j?.summaries || j?.days || []; // guard multiple shapes
+    const arr = j?.summaries || j?.days || [];
     return arr.reduce((a,day)=> a + (Number(day.metric?.precipTotal ?? day?.metric?.precipTotalMM ?? 0) || 0), 0);
   };
   const todayWU = Number(cur.precipTotalToday||0);
@@ -428,6 +429,21 @@ async function computeRainWU(cur){
   return { today: todayWU, yesterday: yesterdayWU||0, last7: sum(s7), last30: sum(s30), ytd: sum(s30) };
 }
 
+/* ---- RAIN PANEL RENDERER (this was missing) ---- */
+function renderRainPanel(r){
+  const el = $('rainPanel'); if(!el) return;
+  el.innerHTML = `
+    <span class="rain-label">Rainfall Totals</span><br>
+    Today: <b>${to1(r.today)} mm</b><br>
+    Yesterday: <b>${to1(r.yesterday)} mm</b><br>
+    Last 7 days: <b>${to1(r.last7)} mm</b><br>
+    Last 30 days: <b>${to1(r.last30)} mm</b><br>
+    Year-to-date (approx): <b>${Math.round(r.ytd)} mm</b><br>
+    <span style="font-size:.95em;opacity:.7;">*Totals use your WU station daily summaries; today/yesterday prefer live obs.</span>
+  `;
+}
+
+/* ---- Fishing, Tides & Swell ---- */
 async function renderFishingPanels(){
   const f0 = daily[0]?.day || {};
   const mar0 = await getMarine(activeFishingKey);
@@ -452,6 +468,7 @@ async function renderFishingPanelFull(){
     <div id="swellWrap" class="fish-swell"></div>`;
   $('fishToggle').addEventListener('change',async(e)=>{activeFishingKey=e.target.checked?'whangapoua':'coromandel'; await renderFishingPanelFull();});
 
+  // “Tide-like” table from moon times (7–14 days)
   const rows=(Object.keys(astroByDate).sort()).map(k=>{
     const m=astroByDate[k]?.moon||{};
     const highs=[m.transitISO,m.underfootISO].filter(Boolean).map(fmtHM).join(', ')||'—';
@@ -462,6 +479,7 @@ async function renderFishingPanelFull(){
   }).join('');
   $('tideWrap').innerHTML=`<table class="tide-table"><thead><tr><th>Day</th><th>High (approx)</th><th>Low (approx)</th><th>Moon</th></tr></thead><tbody>${rows}</tbody></table><div class="tide-note">*Approximate windows inferred from moon transit/underfoot (highs) and moonrise/set (lows). Use official tables for navigation.</div>`;
 
+  // Marine snapshot + Swell image (site-specific)
   const mar = await getMarine(activeFishingKey);
   const label = fishingSites[activeFishingKey].label;
   $('fishMarine').textContent = `Marine (${label}, ~1hr): ${mar.text}`;
@@ -543,7 +561,7 @@ window.addEventListener('error', (ev)=>{
   console.error('Window error:', ev.error || ev.message);
   showDebug('Script error: ' + (ev.error?.message || ev.message));
 });
-/* extra guards */
+/* extra guard for invalid times */
 const _fmtHM = fmtHM; fmtHM = (iso)=>{ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return '—'; return _fmtHM(iso); };
 </script>
 </body>
