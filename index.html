@@ -65,6 +65,7 @@
   .tide-table th{text-align:left;color:#0f5c57;font-weight:700}
   .tide-note{font-size:.92em;color:#2f6d65;margin-top:6px}
   .fish-outlook{margin-top:10px;font-size:.96rem;color:#0e5c4f}
+
   .loader{margin:60px auto 34px;border:7px solid #d7e3f5;border-top:7px solid #0f82c6;border-radius:50%;width:44px;height:44px;animation:spin 1.05s linear infinite}
   @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
   .credit{text-align:center;color:#b4c2d3;font-size:.96em;margin:31px auto 0}
@@ -113,15 +114,15 @@ const xwStationId     = "pws_paeroa";
 const apiClientId     = "U8feQfLlcEfcXDfsWZs4C";
 const apiClientSecret = "HvIaM6HOkFmlJ8ywHPNSudj9txzpyuP7gJh2eDvq";
 
-/* site coords for maritime “closest” (diff coasts) */
+/* Marine “closest” coords for two coasts */
 const siteCoords = {
   coromandel:  {lat:-36.760, long:175.500}, // Firth / west side
   whangapoua:  {lat:-36.720, long:175.670}  // east coast
 };
+/* Tide-like window offsets so the two sites differ */
 const tideOffsets = {
-  /* minute offsets applied to moon-based tide windows so coasts differ */
   coromandel: {high:+0,  low:+0},
-  whangapoua:{high:+25, low:+10}  // tweak if you want
+  whangapoua: {high:+25, low:+10}
 };
 const fishingSites = {
   coromandel: { label:"Coromandel", maritimeId:"pws_coromandeltown1", swellSlug:"thames",      altLink:"https://www.swellmap.com/surf/forecast/thames" },
@@ -143,10 +144,8 @@ function localISO(date, tz="Pacific/Auckland"){
   const o = Object.fromEntries(p.map(x=>[x.type,x.value]));
   return `${o.year}-${o.month}-${o.day}`;
 }
-/* simplified moon name */
 function simpleMoonName(name, illum){
-  const i = Number(illum||0);
-  const n = (name||"").toLowerCase();
+  const i = Number(illum||0), n=(name||"").toLowerCase();
   if (i <= 5) return "new moon";
   if (i >= 95) return "full moon";
   if (i>=45 && i<=55) return n.includes('wax') ? "first quarter" : (n.includes('wan') ? "last quarter" : "half");
@@ -177,7 +176,7 @@ let tz = "Pacific/Auckland";
 async function start(){
   $('loader').style.display='block'; $('mainContent').style.display='none';
 
-  // CURRENT (WU first, then XW fill)
+  // CURRENT (WU, then XW fills gaps)
   let cur={};
   const wu = await get(wuCur(wuStationId),9000);
   if (wu?.observations?.[0]){
@@ -202,7 +201,7 @@ async function start(){
     cur.windSpeed = cur.windSpeed ?? p0.windSpeedKPH ?? null;
     cur.windDir = cur.windDir ?? p0.windDir ?? null;
     cur.dewpt = cur.dewpt ?? p0.dewpointC ?? null;
-    cur.visibility = cur.visibility ?? p0.visibilityKM ?? null;   // visibility fallback
+    cur.visibility = cur.visibility ?? p0.visibilityKM ?? null;
     cur.uv = cur.uv ?? p0.uvi ?? null;
     cur.obsEpoch = cur.obsEpoch ?? (p0.dateTimeISO?Date.parse(p0.dateTimeISO):Date.now());
   }
@@ -239,11 +238,10 @@ async function start(){
   cur.sunrise = astroToday?.sun?.riseISO || todayDay.sunriseISO || null;
   cur.sunset  = astroToday?.sun?.setISO  || todayDay.sunsetISO  || null;
 
-  // Rain totals (today/yesterday = WU; longer = XW obs from Jan 1)
-  const rain = await computeRainTotals(cur);
+  const rain = await computeRainTotals(cur); // includes last7/last30/YTD
 
   renderCurrent(cur, todayDay, todayKey);
-  renderAdvice(cur, todayDay, rain.today, new Date());
+  renderAdvice(cur, todayDay, {today: rain.today, last7: rain.last7, last30: rain.last30}, new Date());
   renderForecastCards(daily, todayKey);
   renderRainPanel(rain);
   await renderFishingPanels();
@@ -297,7 +295,7 @@ function renderCurrent(p, todayDay, todayKey){
   let windTxt="—"; if(windVal!==null) windTxt = (windVal<0.6)?"Calm":`${windVal} / ${gustVal||windVal} km/h ${windDirCard?`(${windDirCard})`:""}`;
   let pressTxt = (p.pressure!=null)?`${Number(p.pressure).toFixed(1)} hPa`:"—"; const tr=pressureTrend(); if(tr) pressTxt+=` (${tr})`;
 
-  const astro = astroByDate[todayKey]; const m=astro?.moon;
+  const m=astroByDate[todayKey]?.moon;
   const moonTxt = m ? `${m.name}${m.illum!=null?` • ${m.illum}%`:``}` : "—";
   const moonImg = m ? `<img src="${moonSVG(m.name,m.illum)}" alt="moon" style="width:40px;height:40px;display:block;margin-top:2px;">`:"";
 
@@ -329,26 +327,74 @@ function renderCurrent(p, todayDay, todayKey){
     </div>`;
 }
 
-/* Kiwi advice – varied & seasonal */
-function renderAdvice(p, todayDay, rainToday, now){
-  const month = (now||new Date()).getMonth()+1;
-  const winter = (month>=6 && month<=8), summer=(month>=12||month<=2);
-  const bits = new Set();
+/* --------- ADVICE (NZ, short, varied) --------- */
 
-  const add=(s)=>{ if(s) bits.add(s); };
-
-  if (rainToday>10) add("Heavy rain so far — watch low spots and farm tracks.");
-  else if (rainToday>2) add("Showery — take the jacket.");
-  if ((p.windGust??0)>35) add("Windy — tie things down.");
-  else if ((p.windGust??0)>20) add("Breezy at times.");
-  if ((p.temp??99)<6 && winter) add("Frost risk at dawn.");
-  if ((p.uv??0)>=7 && summer) add("High UV — slap on sunblock.");
-  if (pressureTrend()==="falling") add("Barometer easing — changeable later.");
-  if (!bits.size) add("Looks settled this morning.");
-
-  $('adviceBlock').textContent = Array.from(bits).join(" ");
+function renderAdvice(obs, todayDay, rainTotals, now = new Date()) {
+  const ctx = buildContext(obs, todayDay, rainTotals, now);
+  const lines = pickAdvice(ctx, 3);
+  $('adviceBlock').textContent = lines.join(' ');
+}
+function buildContext(obs, day, rainTotals, now) {
+  const m = (now.getMonth()+1);
+  const season = (m>=12||m<=2) ? "summer" : (m<=5 ? "autumn" : (m<=8 ? "winter" : "spring"));
+  const windMax = num(day?.windSpeedMaxKPH, obs?.windSpeed);
+  const pop     = num(day?.pop);
+  const rainFc  = num(day?.precipMM);
+  const uv      = num(day?.uvi, obs?.uv);
+  const hum     = num(obs?.humidity, day?.maxHumidity);
+  const maxT    = num(day?.maxTempC, obs?.temp);
+  const minT    = num(day?.minTempC, obs?.dewpt);
+  const gust    = num(obs?.windGust, windMax);
+  const tempNow = num(obs?.temp, maxT);
+  const windDir = (typeof obs?.windDir === 'number') ? degToCardinal(obs.windDir) : (obs?.windDir || "");
+  const pressT  = (function(){ try { return pressureTrend && pressureTrend(); } catch { return null; } })();
+  return {
+    season, windMax, gust, pop, rainFc, uv, hum, maxT, minT, tempNow, windDir, pressT,
+    rainToday: num(rainTotals?.today), rain7: num(rainTotals?.last7), rain30: num(rainTotals?.last30),
+    cold: (num(obs?.temp, maxT) <= 6) || (minT <= 2),
+    hot: maxT >= 26,
+    breezy: windMax >= 20,
+    windy: windMax >= 35,
+    wet: (pop >= 60 || rainFc >= 3 || num(rainTotals?.today) >= 5)
+  };
+}
+function num(...vals){ for(const v of vals){ const n=Number(v); if(!isNaN(n)) return n; } return 0; }
+const P=(arr)=>()=>arr[Math.floor(Math.random()*arr.length)];
+const RULES=[
+  {id:'wind_warn', when:c=>c.windy, msg:P(["Windy — tie down trampolines and light gear.","Gusty on exposed ridges and bridges — take care."])},
+  {id:'breezy', when:c=>!c.windy&&c.breezy, msg:P(["Fresh breeze — pick sheltered spots for arvo jobs.","Bit of a breeze — spray drift possible."])},
+  {id:'press_down', when:c=>c.pressT==='falling', msg:P(["Barometer easing — changeable later.","Pressure dropping — a few showers could bubble up."])},
+  {id:'fog', when:c=>c.hum>=95&&c.windMax<=5&&c.minT<=5, msg:P(["Patchy fog at first — go steady on rural back roads.","Fog possible around dawn — allow extra time."])},
+  {id:'frost', when:c=>c.season==='winter'&&c.minT<=0, msg:P(["Hard frost — black ice on shaded bridges.","Big frost about — de-ice time for the ute."])},
+  {id:'uv', when:c=>c.uv>=7, msg:P(["High UV — hat, sunnies, sunscreen.","UV cranks up — reapply if you’re outdoors."])},
+  {id:'hot', when:c=>c.hot, msg:P(["Hot inland — hydrate and start early.","Warm one — ease off heavy mahi mid‑arvo."])},
+  {id:'soaking', when:c=>c.rainFc>=8||c.rainToday>=15, msg:P(["Soaking rain — low spots will pond.","Proper wet — creeks will run up; watch driveways."])},
+  {id:'slips', when:c=>c.rain7>=60||(c.windy&&c.rainFc>=5), msg:P(["Recent heavy rain — watch for slips on the coast road.","Soft shoulders after rain — take it easy on metal roads."])},
+  {id:'showers', when:c=>c.pop>=40&&c.pop<70&&c.rainFc<5, msg:P(["Showers on and off — best windows late morning.","Hit‑and‑miss showers — keep the coat in the ute."])},
+  {id:'drying', when:c=>!c.wet&&c.windMax>=10&&c.maxT>=14&&c.hum<=80, msg:P(["Good drying day — washing or track work will move.","Decent drying — crack on with outside jobs."])},
+  {id:'garden_water', when:c=>!c.wet&&c.maxT>=18&&c.hum<65&&c.rain7<5, msg:P(["Gardens dry fast — water this evening.","Soils pulling moisture — give veg a drink tonight."])},
+  {id:'mildew', when:c=>c.hum>=90&&c.maxT>=16, msg:P(["Muggy — watch for powdery mildew; ventilate greenhouses.","High humidity — check roses and courgettes for mildew."])},
+  {id:'hay', when:c=>c.season==='summer'&&!c.wet&&c.windMax>=8&&c.maxT>=22, msg:P(["Haymaking window — dry with a handy breeze.","Good for turning — warm, dry, and moving air."])},
+  {id:'spring_pollen', when:c=>c.season==='spring'&&c.breezy, msg:P(["Spring breeze pushes pollen — antihistamines handy.","Pollen about — breezy and blossom time."])},
+  {id:'winter_fire', when:c=>c.season==='winter'&&!c.wet&&c.windMax<=15, msg:P(["Calm winter day — tidy‑up burn may be okay (check restrictions).","Crisp and calm — bonfire evening if allowed."])},
+  {id:'westerly', when:c=>/W$|W[NE]?/.test(c.windDir)&&c.windy, msg:P(["Strong westerly — exposed paddocks will feel it.","Westerly blasts — consider shelter for stock."])},
+  {id:'northerly_muggy', when:c=>/^N/.test(c.windDir)&&c.hum>=85&&c.maxT>=18, msg:P(["Humid northerly — tacky paint and sticky doors today.","Muggy northerly — take breaks in the shade."])},
+  {id:'settled', when:c=>!c.wet&&!c.windy&&c.pop<30, msg:P(["Pretty settled — great for a stroll or a bit of DIY.","Settled overall — good day to tick things off."])},
+];
+function pickAdvice(ctx,n=3){
+  const key=localISO(new Date())+"::advice";
+  const used=JSON.parse(localStorage.getItem(key)||"[]");
+  const matches=RULES.filter(r=>{try{return r.when(ctx)}catch{return false}}).map(r=>({id:r.id,text:(typeof r.msg==='function')?r.msg(ctx):r.msg}));
+  const out=[], seen=new Set();
+  for(const m of matches){ if(seen.has(m.id)||used.includes(m.id)) continue; seen.add(m.id); out.push(m); if(out.length>=n) break; }
+  while(out.length<n){
+    out.push({id:'filler'+out.length,text:["Take a layer — mornings can bite.","Keep water handy and crack on early.","Handy window before the next change."][Math.floor(Math.random()*3)]});
+  }
+  localStorage.setItem(key,JSON.stringify([...used,...out.map(x=>x.id)].slice(0,30)));
+  return out.map(x=>x.text);
 }
 
+/* ---- Forecast cards ---- */
 function renderForecastCards(dailyArr){
   const row=$('forecastRow'); row.innerHTML='';
   dailyArr.slice(0,7).forEach((d,idx)=>{
@@ -413,6 +459,7 @@ function showForecastDetails(index){
   $('modalBg').style.display='flex';
 }
 function closeModal(){ $('modalBg').style.display='none'; }
+document.getElementById('modalBg').addEventListener('click',(e)=>{ if(e.target===document.getElementById('modalBg')) closeModal(); });
 
 function makeDailySummary(day, night, dateObj){
   const month = dateObj.getMonth()+1;
@@ -437,41 +484,36 @@ function makeDailySummary(day, night, dateObj){
   return bits.join(", ") + ".";
 }
 
-/* ---- Rain totals ----
-   WU for today/yesterday; longer via XWeather obs (same PWS) */
+/* ---- Rain totals (WU + XWeather history) ---- */
 async function computeRainTotals(cur){
-  const now = new Date();
+  const now=new Date();
   const fromYTD = `${now.getFullYear()}-01-01`;
   const toISO = localISO(now);
   const his = await get(xwObs(xwStationId,fromYTD,toISO),12000);
   let byDay = {};
   (his?.response?.[0]?.periods||[]).forEach(p=>{
-    const d = (p.dateTimeISO||"").slice(0,10);
-    byDay[d] = (byDay[d]||0) + (Number(p.precipMM)||0);
+    const d=(p.dateTimeISO||"").slice(0,10);
+    byDay[d]=(byDay[d]||0)+(Number(p.precipMM)||0);
   });
-  const keyToday = localISO(now);
-  const key7ago = localISO(new Date(now.getTime()-6*86400e3));
-  const key30ago= localISO(new Date(now.getTime()-29*86400e3));
-  const last7 = sumRange(byDay,key7ago,keyToday);
-  const last30= sumRange(byDay,key30ago,keyToday);
+  const keyToday=localISO(now);
+  const key7=localISO(new Date(now.getTime()-6*86400e3));
+  const key30=localISO(new Date(now.getTime()-29*86400e3));
+  const last7 = sumRange(byDay,key7,keyToday);
+  const last30= sumRange(byDay,key30,keyToday);
   const ytd   = sumRange(byDay,fromYTD,keyToday);
 
   const todayWU = Number(cur.precipTotalToday||0);
   let yestWU = (cur.precipTotalLast24h!=null)?Number(cur.precipTotalLast24h):null;
-  if (yestWU==null){
-    const yKey = localISO(new Date(now.getTime()-86400e3));
-    yestWU = byDay[yKey]||0;
-  }
+  if (yestWU==null){ const yKey=localISO(new Date(now.getTime()-86400e3)); yestWU=byDay[yKey]||0; }
   return {today:todayWU,yesterday:yestWU,last7,last30,ytd};
 }
 function sumRange(map,fromISO,toISO){
   const from=new Date(fromISO+"T00:00:00"), to=new Date(toISO+"T23:59:59");
-  let tot=0;
-  for(const k in map){ const d=new Date(k+"T12:00:00"); if(d>=from && d<=to) tot+=Number(map[k]||0); }
+  let tot=0; for(const k in map){ const d=new Date(k+"T12:00:00"); if(d>=from&&d<=to) tot+=Number(map[k]||0); }
   return Number(tot.toFixed(1));
 }
 
-/* ---- RAIN PANEL ---- */
+/* ---- Rain panel ---- */
 function renderRainPanel(r){
   $('rainPanel').innerHTML = `
     <span class="rain-label">Rainfall Totals</span><br>
@@ -480,7 +522,7 @@ function renderRainPanel(r){
     Last 7 days: <b>${to1(r.last7)} mm</b><br>
     Last 30 days: <b>${to1(r.last30)} mm</b><br>
     Year-to-date: <b>${Math.round(r.ytd)} mm</b><br>
-    <span style="font-size:.95em;opacity:.7;">*Today / yesterday from your WU station. Longer totals from your station’s history via XWeather.</span>`;
+    <span style="font-size:.95em;opacity:.7;">*Today/yesterday from your WU station. Longer totals from your PWS history via XWeather.</span>`;
 }
 
 /* ---- Fishing, Tides & Swell ---- */
@@ -509,7 +551,7 @@ async function renderFishingPanelFull(){
     <div id="fishOutlook" class="fish-outlook"></div>`;
   $('fishToggle').addEventListener('change',async(e)=>{activeFishingKey=e.target.checked?'whangapoua':'coromandel'; await renderFishingPanelFull();});
 
-  /* “Tide-like” table from moon (approx) with coastal offsets */
+  /* Tide-like table from moon + small coast offsets */
   const rows=(Object.keys(astroByDate).sort()).slice(0,14).map(k=>{
     const off = tideOffsets[activeFishingKey]||{high:0,low:0};
     const m=astroByDate[k]?.moon||{};
@@ -521,7 +563,7 @@ async function renderFishingPanelFull(){
     const dayTxt=d.toLocaleDateString('en-NZ',{weekday:'short',month:'short',day:'numeric'});
     return `<tr><td style="padding:6px 4px;">${dayTxt}</td><td style="padding:6px 4px;">${highs}</td><td style="padding:6px 4px;">${lows}</td><td style="padding:6px 4px;">${phase}</td></tr>`;
   }).join('');
-  $('tideWrap').innerHTML=`<table class="tide-table"><thead><tr><th>Day</th><th>High (approx)</th><th>Low (approx)</th><th>Moon</th></tr></thead><tbody>${rows}</tbody></table><div class="tide-note">*Windows inferred from moon transit/underfoot (highs) and moonrise/set (lows) with local offset. For navigation, use official tide tables.</div>`;
+  $('tideWrap').innerHTML=`<table class="tide-table"><thead><tr><th>Day</th><th>High (approx)</th><th>Low (approx)</th><th>Moon</th></tr></thead><tbody>${rows}</tbody></table><div class="tide-note">*Windows inferred from moon transit/underfoot (highs) and moonrise/set (lows) with local offset. For precise tide heights/times use an official tide service.</div>`;
 
   // Marine snapshot + rating
   const mar = await getMarine(activeFishingKey);
@@ -538,7 +580,7 @@ async function renderFishingPanelFull(){
   }).join(' • ');
   $('fishOutlook').textContent = `7-day fishing outlook: ${outlook}`;
 
-  // Swell snapshot (static image or link)
+  // Swell snapshot (image or link)
   const siteMeta = fishingSites[activeFishingKey];
   const img=document.createElement('img');
   img.alt=`${siteMeta.label} Swell`;
